@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 86" fill="none" role="img" aria-label="RaahiX">
+  <title>RaahiX</title>
+  <g stroke="#101828" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 62 V16"/>
+    <path d="M10 16 H24 C38 16 38 40 24 40 H10"/>
+    <path d="M20 40 L36 62"/>
+    <path d="M68 62 V38"/>
+    <path d="M68 50 C68 36 46 36 46 50 C46 64 68 64 68 50"/>
+    <path d="M104 62 V38"/>
+    <path d="M104 50 C104 36 82 36 82 50 C82 64 104 64 104 50"/>
+    <path d="M122 62 V16"/>
+    <path d="M122 40 C122 28 148 28 148 44 V62"/>
+    <path d="M170 64 V40"/>
+  </g>
+  <circle cx="170" cy="24" r="3.6" fill="#101828"/>
+  <g stroke="#101828" stroke-width="13" stroke-linecap="round">
+    <path d="M164 8 L190 34"/>
+    <path d="M236 8 L210 34"/>
+    <path d="M164 78 L190 52"/>
+    <path d="M236 78 L210 52"/>
+  </g>
+</svg>

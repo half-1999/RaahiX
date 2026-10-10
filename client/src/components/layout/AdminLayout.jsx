@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import Logo from '../brand/Logo';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 
@@ -60,8 +61,9 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-surface text-ink">
       <div className="flex min-h-screen">
         <aside className="hidden w-60 shrink-0 border-r border-line bg-white p-4 lg:block">
-          <Link to="/admin" className="mb-6 block font-display text-xl text-brand">
-            RaahiX Ops
+          <Link to="/admin" className="mb-6 flex items-end gap-2">
+            <Logo className="h-7" />
+            <span className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate">Ops</span>
           </Link>
           {nav}
         </aside>
@@ -102,7 +104,10 @@ export default function AdminLayout() {
           <button type="button" className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
           <aside className="relative z-10 h-full w-72 bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-lg text-brand">RaahiX Ops</span>
+              <span className="flex items-end gap-2">
+                <Logo className="h-7" />
+                <span className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate">Ops</span>
+              </span>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close">
                 <X className="h-5 w-5" />
               </button>

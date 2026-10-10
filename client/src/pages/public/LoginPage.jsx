@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../services/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
+import Logo from '../../components/brand/Logo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -39,7 +40,9 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
-      <h1 className="font-display text-3xl font-bold text-navy">RaahiX</h1>
+      <h1>
+        <Logo className="h-12" />
+      </h1>
       <p className="mt-1 text-sm text-slate">Shehar Se Shehar, Saath Safar. Log in to book a seat or run your rides.</p>
       <div className="mt-4 rounded-xl border border-line bg-white p-3 text-xs text-black">
         <p className="font-semibold">Demo accounts</p>

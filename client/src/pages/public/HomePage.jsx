@@ -5,6 +5,7 @@ import { rideService } from '../../services/rideService';
 import RideSearchForm from '../../components/rides/RideSearchForm';
 import RideCard from '../../components/rides/RideCard';
 import Button from '../../components/ui/Button';
+import Logo from '../../components/brand/Logo';
 import EmptyState from '../../components/ui/EmptyState';
 import Skeleton from '../../components/ui/Skeleton';
 import { cityLabel, todayISODate } from '../../utils/format';
@@ -71,7 +72,9 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-[1.1fr_0.9fr] md:py-16">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-coral">Scheduled intercity shared rides</p>
-            <h1 className="mt-3 font-display text-5xl font-bold leading-none text-navy md:text-6xl">RaahiX</h1>
+            <h1 className="mt-3">
+              <Logo className="h-14 md:h-20" />
+            </h1>
             <p className="mt-3 font-display text-2xl text-navy">Shehar Se Shehar, Saath Safar.</p>
             <p className="mt-4 max-w-xl text-base text-slate">
               Discover scheduled intercity shared rides, choose your pickup and drop, book available seats, and travel together.

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="RaahiX">
+  <title>RaahiX</title>
+  <rect width="64" height="64" rx="16" fill="#101828"/>
+  <g stroke="#635BFF" stroke-width="7" stroke-linecap="round">
+    <path d="M16 16 L26 26"/>
+    <path d="M48 16 L38 26"/>
+    <path d="M16 48 L26 38"/>
+    <path d="M48 48 L38 38"/>
+  </g>
+</svg>

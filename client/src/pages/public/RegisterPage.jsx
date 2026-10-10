@@ -9,6 +9,7 @@ import Alert from '../../components/ui/Alert';
 import Badge from '../../components/ui/Badge';
 import { cn } from '../../utils/cn';
 import CabDetailsForm from '../../components/vehicles/CabDetailsForm';
+import Logo from '../../components/brand/Logo';
 import {
   VEHICLE_TYPES,
   capacityForType,
@@ -165,7 +166,8 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="font-display text-3xl font-bold text-navy">Create your RaahiX account</h1>
+      <Logo className="h-10" />
+      <h1 className="mt-4 font-display text-3xl font-bold text-navy">Create your RaahiX account</h1>
       <p className="mt-1 text-sm text-slate">
         Choose passenger or cab driver registration. Driver signup includes full cab details.
       </p>
