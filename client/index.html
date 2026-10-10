@@ -2,13 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
     <title>RaahiX — Scheduled Intercity Shared Rides</title>
     <meta
       name="description"
       content="RaahiX. Shehar Se Shehar, Saath Safar. Scheduled intercity shared rides. A product by The Stack Guy."
     />
+    <meta name="theme-color" content="#101828" />
+    <meta name="application-name" content="RaahiX" />
+
+    <!-- Web app manifest: name, icons, start URL, and standalone display. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Home-screen install on iOS. Android reads the same intent from the manifest. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RaahiX" />
+
+    <meta property="og:type" content="website" />
     <meta property="og:title" content="RaahiX — Scheduled Intercity Shared Rides" />
     <meta property="og:description" content="Shehar Se Shehar, Saath Safar. Discover scheduled intercity shared rides and book a seat." />
     <meta property="og:image" content="/raahix-mark.jpg" />
@@ -16,5 +32,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+      if ('serviceWorker' in navigator && !local) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

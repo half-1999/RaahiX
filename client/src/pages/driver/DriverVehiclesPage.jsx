@@ -7,6 +7,7 @@ import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import CabDetailsForm from '../../components/vehicles/CabDetailsForm';
 import { capacityForType, seatConfigurationForType } from '../../utils/vehicleLayouts';
+import { stockCabImage } from '../../utils/cabImages';
 
 const empty = {
   registrationNumber: '',
@@ -77,7 +78,11 @@ export default function DriverVehiclesPage() {
                   className="h-20 w-28 rounded-lg object-cover"
                 />
               ) : (
-                <div className="flex h-20 w-28 items-center justify-center rounded-lg bg-mist text-xs text-slate">No photo</div>
+                <img
+                  src={stockCabImage(vehicle.make, vehicle.model, vehicle.vehicleType)}
+                  alt={`${vehicle.make} ${vehicle.model}`}
+                  className="h-20 w-28 rounded-lg object-cover"
+                />
               )}
               <div>
                 <p className="font-semibold text-navy">{vehicle.registrationNumber}</p>

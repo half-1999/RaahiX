@@ -132,6 +132,9 @@ function toRideSummary(ride) {
             capacity: vehicle.capacity,
             features: vehicle.features || [],
             registrationNumber: vehicle.registrationNumber,
+            images: (vehicle.images || []).map((image) => ({
+              id: image._id?.toString?.() || image.id,
+            })),
           }
         : undefined,
     driver:
@@ -357,7 +360,7 @@ export async function search({ originCity, destinationCity, date, passengers = 1
     departureTime: { $gt: now, $gte: dayStart, $lte: dayEnd },
   })
     .populate('routeId')
-    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber')
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber images')
     .populate('driverId', 'name phone rating')
     .sort({ departureTime: 1 })
     .lean();
@@ -399,7 +402,7 @@ export async function catalog() {
     departureTime: { $gt: now },
   })
     .populate('routeId')
-    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber')
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber images')
     .populate('driverId', 'name phone rating')
     .sort({ departureTime: 1 })
     .limit(60)
@@ -434,7 +437,7 @@ export async function getRide(rideId) {
       path: 'driverId',
       select: 'name phone rating totalTrips status',
     })
-    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber status');
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber status images');
 
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
