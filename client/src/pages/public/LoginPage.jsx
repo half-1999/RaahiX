@@ -51,9 +51,9 @@ export default function LoginPage() {
           <li>
             Driver: <span className="font-medium text-black">raj.driver@localcab.dev</span> / Driver@12345
           </li>
-          <li>
+          {/* <li>
             Admin: <span className="font-medium text-black">admin@localcab.dev</span> / Admin@12345
-          </li>
+          </li> */}
         </ul>
       </div>
       <form
