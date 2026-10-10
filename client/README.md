@@ -1,6 +1,6 @@
-# RouteSeat Client
+# RaahiX Client
 
-React + Vite SPA for the Local Scheduled Shared-Cab Booking Platform.
+React + Vite SPA for RaahiX, scheduled intercity shared rides. A product by The Stack Guy.
 
 ## Stack
 

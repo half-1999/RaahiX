@@ -3,8 +3,10 @@ import { ROUTE_STATUS } from '../constants/enums.js';
 
 const placeSchema = new mongoose.Schema(
   {
+    name: { type: String, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
+    locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   },
   { _id: false }
 );
@@ -15,6 +17,7 @@ const stopSchema = new mongoose.Schema(
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
     sequence: { type: Number, required: true, min: 1 },
+    locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   },
   { _id: false }
 );
@@ -26,6 +29,7 @@ const routeSchema = new mongoose.Schema(
     stops: { type: [stopSchema], default: [] },
     estimatedDuration: { type: Number, required: true, min: 1 },
     status: { type: String, enum: Object.values(ROUTE_STATUS), default: ROUTE_STATUS.ACTIVE },
+    createdByDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver', default: null },
   },
   { timestamps: true }
 );

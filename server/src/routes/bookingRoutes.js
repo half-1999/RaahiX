@@ -7,6 +7,7 @@ import {
   holdSeatsSchema,
   createBookingSchema,
   cancelBookingSchema,
+  paymentProofSchema,
 } from '../validators/commonValidators.js';
 
 const router = Router();
@@ -28,6 +29,9 @@ router.post(
 );
 
 router.get('/', authenticate, authorize(ROLES.CUSTOMER), bookingController.listMine);
+// Alias so /bookings/my is not captured by /:bookingId
+router.get('/my', authenticate, authorize(ROLES.CUSTOMER), bookingController.listMine);
+router.get('/mine', authenticate, authorize(ROLES.CUSTOMER), bookingController.listMine);
 
 router.get(
   '/:bookingId',
@@ -42,6 +46,21 @@ router.post(
   authorize(ROLES.CUSTOMER, ROLES.ADMIN),
   validate(cancelBookingSchema),
   bookingController.cancel
+);
+
+router.post(
+  '/:bookingId/payment-proof',
+  authenticate,
+  authorize(ROLES.CUSTOMER),
+  validate(paymentProofSchema),
+  bookingController.submitProof
+);
+
+router.get(
+  '/:bookingId/proof',
+  authenticate,
+  authorize(ROLES.CUSTOMER, ROLES.DRIVER, ROLES.ADMIN),
+  bookingController.readProof
 );
 
 export default router;

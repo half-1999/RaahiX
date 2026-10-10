@@ -17,6 +17,9 @@ const paymentMap = {
 };
 
 const rideMap = {
+  DRAFT: { tone: 'neutral', label: 'Draft' },
+  PUBLISHED: { tone: 'brand', label: 'Published' },
+  ACTIVE: { tone: 'accent', label: 'Active' },
   SCHEDULED: { tone: 'brand', label: 'Scheduled' },
   BOARDING: { tone: 'accent', label: 'Boarding' },
   STARTED: { tone: 'warning', label: 'Started' },

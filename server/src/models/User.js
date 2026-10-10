@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
     status: { type: String, enum: Object.values(USER_STATUS), default: USER_STATUS.ACTIVE },
     emailVerified: { type: Boolean, default: false },
     phoneVerified: { type: Boolean, default: false },
+    payoutUpi: { type: String, default: '', trim: true },
+    age: { type: Number, min: 1, max: 120, default: null },
     refreshTokenHash: { type: String, select: false, default: null },
   },
   { timestamps: true }
@@ -28,6 +30,8 @@ userSchema.methods.toSafeObject = function toSafeObject() {
     status: this.status,
     emailVerified: this.emailVerified,
     phoneVerified: this.phoneVerified,
+    payoutUpi: this.payoutUpi || '',
+    age: this.age ?? null,
   };
 };
 

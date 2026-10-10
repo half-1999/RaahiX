@@ -15,6 +15,47 @@ const seatSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const rideStopSchema = new mongoose.Schema(
+  {
+    locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+    name: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
+    state: { type: String, required: true, trim: true },
+    sequence: { type: Number, required: true, min: 1 },
+    pickupAllowed: { type: Boolean, default: true },
+    dropAllowed: { type: Boolean, default: true },
+    estimatedTime: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
+const legSchema = new mongoose.Schema(
+  {
+    fromSequence: { type: Number, required: true },
+    toSequence: { type: Number, required: true },
+    fromLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+    toLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+    capacity: { type: Number, required: true, min: 1 },
+    committed: { type: Number, required: true, min: 0, default: 0 },
+  },
+  { _id: false }
+);
+
+const segmentHoldSchema = new mongoose.Schema(
+  {
+    holdId: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    seatCount: { type: Number, required: true, min: 1 },
+    pickupLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
+    dropLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
+    pickupSequence: { type: Number, required: true },
+    dropSequence: { type: Number, required: true },
+    holdExpiresAt: { type: Date, required: true },
+    status: { type: String, enum: ['ACTIVE', 'CONFIRMED', 'RELEASED'], default: 'ACTIVE' },
+  },
+  { _id: false }
+);
+
 const rideSchema = new mongoose.Schema(
   {
     routeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', required: true },
@@ -25,6 +66,9 @@ const rideSchema = new mongoose.Schema(
     arrivalTime: { type: Date, required: true },
     pickupPoint: { type: String, required: true, trim: true },
     dropPoint: { type: String, required: true, trim: true },
+    rideStops: { type: [rideStopSchema], default: [] },
+    legs: { type: [legSchema], default: [] },
+    segmentHolds: { type: [segmentHoldSchema], default: [] },
     pricePerSeat: { type: Number, required: true, min: 1 },
     totalSeats: { type: Number, required: true, min: 1 },
     availableSeats: { type: Number, required: true, min: 0 },

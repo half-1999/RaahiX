@@ -32,6 +32,7 @@ const emptyForm = {
   pickupPoint: '',
   dropPoint: '',
   pricePerSeat: 799,
+  reason: '',
 };
 
 export default function AdminRidesPage() {
@@ -41,6 +42,7 @@ export default function AdminRidesPage() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
   const [cancelId, setCancelId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const ridesQuery = useQuery({
     queryKey: ['admin', 'rides'],
@@ -89,6 +91,7 @@ export default function AdminRidesPage() {
         pickupPoint: form.pickupPoint,
         dropPoint: form.dropPoint,
         pricePerSeat: Number(form.pricePerSeat),
+        ...(editing ? { reason: form.reason } : {}),
       };
       return editing
         ? adminService.updateRide(entityId(editing), payload)
@@ -105,7 +108,7 @@ export default function AdminRidesPage() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id) => adminService.cancelRide(id),
+    mutationFn: ({ id, reason }) => adminService.cancelRide(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rides'] });
       setCancelId(null);
@@ -297,6 +300,13 @@ export default function AdminRidesPage() {
             value={form.pricePerSeat}
             onChange={(e) => setForm({ ...form, pricePerSeat: e.target.value })}
           />
+          {editing ? (
+            <Input
+              label="Reason"
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+            />
+          ) : null}
         </div>
       </Modal>
 
@@ -312,15 +322,21 @@ export default function AdminRidesPage() {
             <Button
               variant="danger"
               loading={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate(cancelId)}
+              onClick={() => cancelMutation.mutate({ id: cancelId, reason: cancelReason })}
             >
               Confirm cancel
             </Button>
           </>
         }
       >
+        <Input
+          label="Reason"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          className="mb-3"
+        />
         <p className="text-sm text-ink-muted">
-          Soft-cancels the ride. Affected bookings follow server cancellation policy.
+          Soft-cancels the ride. Confirmed bookings stay in history with a full refund obligation.
         </p>
       </Modal>
     </div>

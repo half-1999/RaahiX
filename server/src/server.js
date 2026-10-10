@@ -22,12 +22,30 @@ async function maybeSeed() {
 async function start() {
   await connectDb();
   await maybeSeed();
-  app.listen(config.port, () => {
+
+  const server = app.listen(config.port, () => {
     logger.info('server.started', { port: config.port, env: config.env });
     if (config.env !== 'test') {
       startExpireHoldsJob();
     }
   });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error('server.port_in_use', {
+        port: config.port,
+        message: `Port ${config.port} is already in use. Stop the other process and retry.`,
+      });
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 start().catch((err) => {

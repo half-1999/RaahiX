@@ -1,14 +1,16 @@
 import { MessageCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import { cityLabel, formatCurrency, formatDate, formatTime } from '../../utils/format';
+import { normalizeBooking } from '../../utils/bookingNormalize';
 
-function buildMessage(booking) {
-  const ride = booking?.ride || {};
+function buildMessage(raw) {
+  const booking = normalizeBooking(raw) || raw || {};
+  const ride = booking.ride || {};
   const origin = cityLabel(ride.route?.origin || ride.origin);
   const destination = cityLabel(ride.route?.destination || ride.destination);
   const seats = (booking.selectedSeats || booking.passengers?.map((p) => p.seatNumber) || []).join(', ');
   return [
-    `RouteSeat booking ${booking.bookingNumber || ''}`.trim(),
+    `RaahiX booking ${booking.bookingNumber || ''}`.trim(),
     `${origin} → ${destination}`,
     `${formatDate(ride.date || ride.departureTime)} ${formatTime(ride.departureTime)}`,
     `Seats: ${seats || '—'}`,

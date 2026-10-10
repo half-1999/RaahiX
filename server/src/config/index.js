@@ -1,6 +1,13 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envPath = path.resolve(__dirname, '../../.env');
+
+// Always load server/.env from this file's location (not process.cwd()).
+dotenv.config({ path: envPath, override: true });
 
 const required = ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
 
@@ -10,17 +17,28 @@ for (const key of required) {
   }
 }
 
+function parseClientUrls(raw) {
+  const listed = String(raw || 'http://localhost:5173')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return [...new Set(listed)];
+}
+
+const clientUrls = parseClientUrls(process.env.CLIENT_URL);
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 5055,
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/local_cab_booking',
   useMemoryMongo: process.env.USE_MEMORY_MONGO === 'true',
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrl: clientUrls[0],
+  clientUrls,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev_access_secret_change_me_32chars',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_change_me_32chars',
-    accessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || '7d',
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '30d',
   },
   email: {
     provider: process.env.EMAIL_PROVIDER || 'console',

@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const styles = {
-  info: 'border-brand/30 bg-brand-soft text-brand-dark',
+  info: 'border-brand/25 bg-indigo-soft text-navy',
   success: 'border-success/30 bg-success/10 text-success',
   warning: 'border-warning/30 bg-warning/10 text-warning',
   error: 'border-danger/30 bg-danger/10 text-danger',

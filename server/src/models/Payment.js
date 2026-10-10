@@ -9,20 +9,23 @@ const paymentSchema = new mongoose.Schema(
     currency: { type: String, default: 'INR' },
     gateway: { type: String, required: true },
     gatewayOrderId: { type: String, required: true },
-    gatewayPaymentId: { type: String, default: null },
-    gatewaySignature: { type: String, default: null },
+    gatewayPaymentId: { type: String, default: undefined },
+    gatewaySignature: { type: String, default: undefined },
     status: { type: String, enum: Object.values(PAYMENT_STATUS), default: PAYMENT_STATUS.CREATED },
-    paidAt: { type: Date, default: null },
-    refundAmount: { type: Number, default: null },
-    refundedAt: { type: Date, default: null },
-    rawResponse: { type: mongoose.Schema.Types.Mixed, default: null },
+    paidAt: { type: Date, default: undefined },
+    refundAmount: { type: Number, default: undefined },
+    refundedAt: { type: Date, default: undefined },
+    rawResponse: { type: mongoose.Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true }
 );
 
 paymentSchema.index({ bookingId: 1 });
 paymentSchema.index({ gatewayOrderId: 1 }, { unique: true });
-paymentSchema.index({ gatewayPaymentId: 1 }, { unique: true, sparse: true });
-paymentSchema.index({ status: 1, createdAt: -1 });
+// Sparse unique: only index documents that have a real gatewayPaymentId string.
+paymentSchema.index(
+  { gatewayPaymentId: 1 },
+  { unique: true, sparse: true, partialFilterExpression: { gatewayPaymentId: { $type: 'string' } } }
+);
 
 export const Payment = mongoose.model('Payment', paymentSchema);

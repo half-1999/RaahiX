@@ -34,7 +34,7 @@ export default function AdminUsersPage() {
   const users = data?.users || [];
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status: next }) => adminService.updateUserStatus(id, next),
+    mutationFn: ({ id, status: next, reason }) => adminService.updateUserStatus(id, next, reason),
     onSuccess: () => {
       setError('');
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -127,9 +127,11 @@ export default function AdminUsersPage() {
                       size="sm"
                       variant="outline"
                       loading={statusMutation.isPending}
-                      onClick={() =>
-                        statusMutation.mutate({ id: entityId(row), status: 'ACTIVE' })
-                      }
+                      onClick={() => {
+                        const reason = window.prompt('Reason for this change');
+                        if (!reason || reason.trim().length < 3) return;
+                        statusMutation.mutate({ id: entityId(row), status: 'ACTIVE', reason: reason.trim() });
+                      }}
                     >
                       Activate
                     </Button>
@@ -139,9 +141,11 @@ export default function AdminUsersPage() {
                       size="sm"
                       variant="danger"
                       loading={statusMutation.isPending}
-                      onClick={() =>
-                        statusMutation.mutate({ id: entityId(row), status: 'BLOCKED' })
-                      }
+                      onClick={() => {
+                        const reason = window.prompt('Reason for this change');
+                        if (!reason || reason.trim().length < 3) return;
+                        statusMutation.mutate({ id: entityId(row), status: 'BLOCKED', reason: reason.trim() });
+                      }}
                     >
                       Block
                     </Button>

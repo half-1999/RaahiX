@@ -41,6 +41,8 @@ export const searchRidesSchema = z.object({
 export const holdSeatsSchema = z.object({
   rideId: objectId,
   seatNumbers: z.array(z.string().min(1)).min(1),
+  pickupLocationId: objectId.optional(),
+  dropLocationId: objectId.optional(),
 });
 
 export const createBookingSchema = z.object({
@@ -56,6 +58,8 @@ export const createBookingSchema = z.object({
       })
     )
     .min(1),
+  pickupLocationId: objectId.optional(),
+  dropLocationId: objectId.optional(),
 });
 
 export const cancelBookingSchema = z.object({
@@ -85,7 +89,37 @@ export const verifyPaymentSchema = z.object({
 });
 
 export const driverStatusSchema = z.object({
-  status: z.enum([RIDE_STATUS.BOARDING, RIDE_STATUS.STARTED, RIDE_STATUS.COMPLETED]),
+  status: z.enum([
+    RIDE_STATUS.PUBLISHED,
+    RIDE_STATUS.ACTIVE,
+    RIDE_STATUS.COMPLETED,
+    RIDE_STATUS.CANCELLED,
+    RIDE_STATUS.BOARDING,
+    RIDE_STATUS.STARTED,
+  ]),
+});
+
+export const driverRideSchema = z.object({
+  routeId: objectId,
+  vehicleId: objectId,
+  departureTime: z.string().min(1),
+  arrivalTime: z.string().min(1),
+  pricePerSeat: z.number().min(1),
+  capacity: z.number().int().min(1).max(6).optional(),
+  pickupPoint: z.string().min(1).optional(),
+  dropPoint: z.string().min(1).optional(),
+});
+
+export const driverUpdateRideSchema = z.object({
+  departureTime: z.string().min(1).optional(),
+  arrivalTime: z.string().min(1).optional(),
+  pricePerSeat: z.number().min(1).optional(),
+  pickupPoint: z.string().min(1).optional(),
+  dropPoint: z.string().min(1).optional(),
+});
+
+export const driverCapacitySchema = z.object({
+  capacity: z.number().int().min(1).max(6),
 });
 
 export const createDriverSchema = z.object({
@@ -106,6 +140,7 @@ export const updateDriverSchema = z.object({
   verificationStatus: z.enum(Object.values(DRIVER_VERIFICATION)).optional(),
   status: z.enum(Object.values(DRIVER_STATUS)).optional(),
   rating: z.number().min(0).max(5).optional(),
+  reason: z.string().min(3),
 });
 
 export const createVehicleSchema = z.object({
@@ -113,14 +148,17 @@ export const createVehicleSchema = z.object({
   registrationNumber: z.string().min(1),
   make: z.string().min(1),
   model: z.string().min(1),
-  vehicleType: z.string().min(1),
-  capacity: z.number().int().min(1),
-  seatConfiguration: z.array(seatConfigSchema).min(1),
+  vehicleType: z.enum(['5_SEATER', '6_SEATER', '7_SEATER', 'SEDAN', 'SUV', 'MUV']),
+  capacity: z.number().int().min(1).optional(),
+  seatConfiguration: z.array(seatConfigSchema).min(1).optional(),
   features: z.array(z.string()).optional(),
   status: z.enum(Object.values(VEHICLE_STATUS)).optional(),
 });
 
 export const updateVehicleSchema = createVehicleSchema.partial();
+
+export const driverVehicleSchema = createVehicleSchema.omit({ driverId: true });
+export const driverUpdateVehicleSchema = updateVehicleSchema.omit({ driverId: true });
 
 export const createRouteSchema = z.object({
   origin: placeSchema,
@@ -131,6 +169,26 @@ export const createRouteSchema = z.object({
 });
 
 export const updateRouteSchema = createRouteSchema.partial();
+
+export const driverRouteSchema = z.object({
+  estimatedDuration: z.number().int().min(1),
+  stops: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        city: z.string().min(1),
+        state: z.string().min(1),
+      })
+    )
+    .min(2),
+});
+
+export const updateLocationSchema = z.object({
+  name: z.string().min(1).optional(),
+  city: z.string().min(1).optional(),
+  state: z.string().min(1).optional(),
+  aliases: z.array(z.string().min(1)).optional(),
+});
 
 export const createRideSchema = z.object({
   routeId: objectId,
@@ -155,11 +213,34 @@ export const updateRideSchema = z.object({
   dropPoint: z.string().optional(),
   pricePerSeat: z.number().min(1).optional(),
   status: z.enum(Object.values(RIDE_STATUS)).optional(),
-  reason: z.string().optional(),
+  reason: z.string().min(3),
 });
 
 export const updateUserStatusSchema = z.object({
   status: z.enum(Object.values(USER_STATUS)),
+  reason: z.string().min(3),
+});
+
+export const paymentProofSchema = z.object({
+  amount: z.number().min(0).optional(),
+  screenshot: z.string().min(1),
+});
+
+export const paymentReviewSchema = z.object({
+  decision: z.enum(['APPROVE', 'REJECT']),
+  reason: z.string().optional(),
+});
+
+export const refundUpdateSchema = z.object({
+  refundStatus: z.enum(['NOT_APPLICABLE', 'PENDING', 'PARTIAL', 'COMPLETED', 'WAIVED']),
+  refundReference: z.string().max(120).optional(),
+  reason: z.string().min(3),
+});
+
+export const driverPaymentDetailsSchema = z.object({
+  upiId: z.string().min(3).optional(),
+  qrCode: z.string().optional(),
+  paymentInstructions: z.string().max(500).optional(),
 });
 
 export const reportQuerySchema = z.object({

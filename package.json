@@ -2,7 +2,7 @@
   "name": "local-cab-booking",
   "version": "1.0.0",
   "private": true,
-  "description": "Local Scheduled Shared-Cab Booking Platform — MERN MVP",
+  "description": "RaahiX — Scheduled Intercity Shared Rides",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",

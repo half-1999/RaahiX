@@ -9,16 +9,38 @@ import routes from './routes/index.js';
 
 const app = express();
 
-app.use(helmet());
+const localDevOrigin =
+  /^https?:\/\/(localhost|127\.0\.0\.1):(517\d|3000|4173)$/i;
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (config.clientUrls.includes(origin)) return true;
+  if (config.env !== 'production' && localDevOrigin.test(origin)) return true;
+  return false;
+}
+
+app.use(
+  helmet({
+    // Allow browser clients on another origin (Vite) to call the API.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   })
 );
 
 app.use(
   express.json({
+    limit: '4mb',
     verify: (req, res, buf) => {
       req.rawBody = buf;
     },

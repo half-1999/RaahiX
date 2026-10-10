@@ -5,15 +5,17 @@ import { getErrorMessage } from '../../services/api';
 import PageHeader from '../../components/common/PageHeader';
 import Alert from '../../components/ui/Alert';
 import Skeleton from '../../components/ui/Skeleton';
-import { formatCurrency } from '../../utils/format';
 
 const cards = [
-  { key: 'users', label: 'Users', to: '/admin/users' },
-  { key: 'drivers', label: 'Drivers', to: '/admin/drivers' },
-  { key: 'ridesToday', label: 'Rides today', to: '/admin/rides' },
-  { key: 'bookingsToday', label: 'Bookings today', to: '/admin/bookings' },
-  { key: 'revenueToday', label: 'Revenue today', to: '/admin/payments', money: true },
-  { key: 'pendingPayments', label: 'Pending payments', to: '/admin/payments' },
+  { key: 'drivers', label: 'Total drivers', to: '/admin/drivers' },
+  { key: 'verifiedDrivers', label: 'Verified drivers', to: '/admin/drivers' },
+  { key: 'customers', label: 'Customers', to: '/admin/users' },
+  { key: 'activeVehicles', label: 'Active vehicles', to: '/admin/vehicles' },
+  { key: 'ridesToday', label: "Today's rides", to: '/admin/rides' },
+  { key: 'upcomingRides', label: 'Upcoming rides', to: '/admin/rides' },
+  { key: 'pendingBookings', label: 'Pending bookings', to: '/admin/bookings' },
+  { key: 'pendingProofs', label: 'Pending payments', to: '/admin/payments' },
+  { key: 'pendingRefunds', label: 'Pending refunds', to: '/admin/bookings' },
 ];
 
 export default function AdminDashboardPage() {
@@ -24,7 +26,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Ops dashboard" subtitle="Today’s operational snapshot" />
+      <PageHeader title="Control tower" subtitle="Live counts from RaahiX operations" />
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -41,11 +43,7 @@ export default function AdminDashboardPage() {
             className="rounded-lg border border-line bg-white p-4 hover:border-brand/40"
           >
             <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{c.label}</p>
-            <p className="mt-2 font-display text-3xl text-ink">
-              {c.money
-                ? formatCurrency(data?.[c.key])
-                : (data?.[c.key] ?? '—')}
-            </p>
+            <p className="mt-2 font-display text-3xl text-ink">{data?.[c.key] ?? '—'}</p>
           </Link>
         ))}
       </div>

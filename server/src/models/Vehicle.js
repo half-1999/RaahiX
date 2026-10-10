@@ -20,6 +20,17 @@ const vehicleSchema = new mongoose.Schema(
     capacity: { type: Number, required: true, min: 1 },
     seatConfiguration: { type: [seatConfigSchema], required: true },
     features: [{ type: String }],
+    color: { type: String, default: '', trim: true },
+    images: {
+      type: [
+        {
+          file: { type: String, required: true },
+          mime: { type: String, required: true },
+          primary: { type: Boolean, default: false },
+        },
+      ],
+      default: [],
+    },
     status: { type: String, enum: Object.values(VEHICLE_STATUS), default: VEHICLE_STATUS.ACTIVE },
   },
   { timestamps: true }

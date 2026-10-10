@@ -9,6 +9,7 @@ const auditLogSchema = new mongoose.Schema(
     entityId: { type: String, required: true },
     oldValue: { type: mongoose.Schema.Types.Mixed, default: null },
     newValue: { type: mongoose.Schema.Types.Mixed, default: null },
+    reason: { type: String, default: null },
     metadata: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

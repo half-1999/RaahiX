@@ -4,6 +4,9 @@ export const authService = {
   register(payload) {
     return api.post('/auth/register', payload).then((r) => r.data.data);
   },
+  registerDriver(payload) {
+    return api.post('/auth/register-driver', payload).then((r) => r.data.data);
+  },
   login(payload) {
     return api.post('/auth/login', payload).then((r) => r.data.data);
   },
@@ -15,5 +18,8 @@ export const authService = {
   },
   me() {
     return api.get('/auth/me').then((r) => r.data.data);
+  },
+  updateProfile(payload) {
+    return api.patch('/auth/me', payload).then((r) => r.data.data);
   },
 };

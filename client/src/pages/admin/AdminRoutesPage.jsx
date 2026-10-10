@@ -221,7 +221,7 @@ export default function AdminRoutesPage() {
         <label className="mt-3 block space-y-1.5">
           <span className="text-sm font-medium text-ink">Stops (one per line: name, city, state)</span>
           <textarea
-            className="min-h-[96px] w-full rounded-lg border border-line bg-white px-3 py-2 text-sm"
+            className="min-h-[96px] w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-black"
             value={form.stopsText}
             onChange={(e) => setForm((f) => ({ ...f, stopsText: e.target.value }))}
             placeholder="Ghaziabad, Ghaziabad, Uttar Pradesh"

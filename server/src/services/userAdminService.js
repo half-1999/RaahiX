@@ -2,7 +2,7 @@ import { User } from '../models/User.js';
 import { USER_STATUS } from '../constants/enums.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
-import { writeAudit } from './auditService.js';
+import { requireReason, writeAudit } from './auditService.js';
 
 export async function listUsers(filters = {}) {
   const query = {};
@@ -28,7 +28,7 @@ export async function getUser(id) {
   return user.toSafeObject();
 }
 
-export async function updateUserStatus(id, status, actor) {
+export async function updateUserStatus(id, status, actor, reason) {
   if (!Object.values(USER_STATUS).includes(status)) {
     throw new AppError('Invalid status', {
       code: ErrorCodes.VALIDATION_ERROR,
@@ -53,6 +53,7 @@ export async function updateUserStatus(id, status, actor) {
     entityId: user._id,
     oldValue: { status: oldStatus },
     newValue: { status },
+    reason: requireReason(reason),
   });
 
   return user.toSafeObject();

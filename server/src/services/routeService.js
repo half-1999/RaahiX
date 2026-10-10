@@ -1,7 +1,10 @@
 import { Route } from '../models/Route.js';
+import { Driver } from '../models/Driver.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 import { writeAudit } from './auditService.js';
+import { toPlace } from './locationService.js';
+import { ROUTE_STATUS } from '../constants/enums.js';
 
 export async function listRoutes(filters = {}) {
   const query = {};
@@ -23,8 +26,20 @@ export async function getRoute(id) {
   return route;
 }
 
+async function normalizedStops(stops = []) {
+  const resolved = [];
+  for (const stop of stops) {
+    const place = await toPlace(stop);
+    resolved.push({
+      ...place,
+      sequence: stop.sequence || resolved.length + 1,
+    });
+  }
+  return resolved;
+}
+
 export async function createRoute(payload, actor) {
-  const { origin, destination, stops = [], estimatedDuration, status } = payload;
+  const { origin, destination, stops = [], estimatedDuration, status, createdByDriverId = null } = payload;
 
   if (!origin?.city || !origin?.state || !destination?.city || !destination?.state) {
     throw new AppError('origin and destination with city/state are required', {
@@ -34,11 +49,12 @@ export async function createRoute(payload, actor) {
   }
 
   const route = await Route.create({
-    origin,
-    destination,
-    stops,
+    origin: await toPlace(origin),
+    destination: await toPlace(destination),
+    stops: await normalizedStops(stops),
     estimatedDuration,
     status,
+    createdByDriverId,
   });
 
   await writeAudit({
@@ -71,10 +87,11 @@ export async function updateRoute(id, updates, actor) {
     status: route.status,
   };
 
-  const allowed = ['origin', 'destination', 'stops', 'estimatedDuration', 'status'];
-  for (const key of allowed) {
-    if (updates[key] !== undefined) route[key] = updates[key];
-  }
+  if (updates.origin) route.origin = await toPlace(updates.origin);
+  if (updates.destination) route.destination = await toPlace(updates.destination);
+  if (updates.stops) route.stops = await normalizedStops(updates.stops);
+  if (updates.estimatedDuration !== undefined) route.estimatedDuration = updates.estimatedDuration;
+  if (updates.status !== undefined) route.status = updates.status;
   await route.save();
 
   await writeAudit({
@@ -94,4 +111,66 @@ export async function updateRoute(id, updates, actor) {
   });
 
   return route;
+}
+
+async function requireDriver(userId) {
+  const driver = await Driver.findOne({ userId });
+  if (!driver) {
+    throw new AppError('Driver profile not found', {
+      code: ErrorCodes.DRIVER_NOT_FOUND,
+      statusCode: 404,
+    });
+  }
+  return driver;
+}
+
+export async function listActiveRoutes() {
+  const routes = await Route.find({ status: ROUTE_STATUS.ACTIVE })
+    .select('origin destination estimatedDuration')
+    .sort({ 'origin.city': 1, 'destination.city': 1 });
+  return { routes };
+}
+
+export async function listOwnRoutes(userId) {
+  const driver = await requireDriver(userId);
+  const routes = await Route.find({ createdByDriverId: driver._id }).sort({ createdAt: -1 });
+  return { routes };
+}
+
+export async function createOwnRoute(userId, payload, actor) {
+  const driver = await requireDriver(userId);
+  const ordered = [...(payload.stops || [])];
+  if (ordered.length < 2) {
+    throw new AppError('A route needs at least two stops', {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
+
+  const places = [];
+  for (const stop of ordered) {
+    places.push(await toPlace(stop));
+  }
+  const keys = places.map((place) => String(place.locationId));
+  if (new Set(keys).size !== keys.length) {
+    throw new AppError('A route cannot repeat the same stop', {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
+
+  const [origin, ...rest] = places;
+  const destination = rest.pop();
+  const stops = rest.map((place, index) => ({ ...place, sequence: index + 1 }));
+
+  return createRoute(
+    {
+      origin,
+      destination,
+      stops,
+      estimatedDuration: payload.estimatedDuration,
+      createdByDriverId: driver._id,
+    },
+    actor
+  );
 }

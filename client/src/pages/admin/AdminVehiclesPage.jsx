@@ -14,38 +14,21 @@ import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
 import Table from '../../components/ui/Table';
 import { entityId } from '../../utils/format';
-
-/** Generate A1/A2, B1/B2… seat layout for shared cabs */
-export function generateSeatConfiguration(rows = 2, seatsPerRow = 2) {
-  const positions =
-    seatsPerRow === 2
-      ? ['WINDOW', 'AISLE']
-      : seatsPerRow === 3
-        ? ['WINDOW', 'MIDDLE', 'AISLE']
-        : Array.from({ length: seatsPerRow }, (_, i) => `POS${i + 1}`);
-
-  const seats = [];
-  for (let r = 1; r <= rows; r += 1) {
-    const letter = String.fromCharCode(64 + r);
-    for (let s = 1; s <= seatsPerRow; s += 1) {
-      seats.push({
-        seatNumber: `${letter}${s}`,
-        row: r,
-        position: positions[s - 1] || `POS${s}`,
-      });
-    }
-  }
-  return seats;
-}
+import {
+  VEHICLE_TYPE_OPTIONS,
+  VEHICLE_TYPES,
+  capacityForType,
+  normalizeVehicleType,
+  seatConfigurationForType,
+  vehicleTypeLabel,
+} from '../../utils/vehicleLayouts';
 
 const emptyForm = {
   driverId: '',
   registrationNumber: '',
   make: 'Maruti',
-  model: 'Ertiga',
-  vehicleType: 'SUV',
-  rows: 2,
-  seatsPerRow: 2,
+  model: 'Dzire',
+  vehicleType: VEHICLE_TYPES.FIVE_SEATER,
   features: 'AC, USB',
   status: 'ACTIVE',
 };
@@ -70,8 +53,8 @@ export default function AdminVehiclesPage() {
   const drivers = driversQuery.data?.drivers || [];
 
   const seatConfiguration = useMemo(
-    () => generateSeatConfiguration(Number(form.rows) || 1, Number(form.seatsPerRow) || 2),
-    [form.rows, form.seatsPerRow]
+    () => seatConfigurationForType(form.vehicleType),
+    [form.vehicleType]
   );
 
   const saveMutation = useMutation({
@@ -82,7 +65,7 @@ export default function AdminVehiclesPage() {
         make: form.make,
         model: form.model,
         vehicleType: form.vehicleType,
-        capacity: seatConfiguration.length,
+        capacity: capacityForType(form.vehicleType),
         seatConfiguration,
         features: form.features
           .split(',')
@@ -111,18 +94,13 @@ export default function AdminVehiclesPage() {
   }
 
   function openEdit(vehicle) {
-    const seats = vehicle.seatConfiguration || [];
-    const rows = seats.length ? Math.max(...seats.map((s) => s.row)) : 2;
-    const seatsPerRow = seats.length ? Math.round(seats.length / rows) : 2;
     setEditing(vehicle);
     setForm({
       driverId: entityId(vehicle.driverId) || vehicle.driverId?._id || '',
       registrationNumber: vehicle.registrationNumber || '',
       make: vehicle.make || '',
       model: vehicle.model || '',
-      vehicleType: vehicle.vehicleType || 'SUV',
-      rows,
-      seatsPerRow,
+      vehicleType: normalizeVehicleType(vehicle.vehicleType),
       features: (vehicle.features || []).join(', '),
       status: vehicle.status || 'ACTIVE',
     });
@@ -134,7 +112,7 @@ export default function AdminVehiclesPage() {
     <div>
       <PageHeader
         title="Vehicles"
-        subtitle="Fleet with seat map configuration"
+        subtitle="Fleet with 5-seater and 7-seater cabin layouts"
         actions={
           <Button size="sm" onClick={openCreate}>
             Add vehicle
@@ -161,7 +139,8 @@ export default function AdminVehiclesPage() {
             {
               key: 'vehicle',
               header: 'Vehicle',
-              render: (row) => `${row.make} ${row.model} · ${row.vehicleType}`,
+              render: (row) =>
+                `${row.make} ${row.model} · ${vehicleTypeLabel(row.vehicleType)}`,
             },
             {
               key: 'driver',
@@ -238,31 +217,27 @@ export default function AdminVehiclesPage() {
             value={form.model}
             onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
           />
-          <Input
+          <Select
             label="Vehicle type"
             value={form.vehicleType}
-            onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                vehicleType: e.target.value,
+                model:
+                  e.target.value === VEHICLE_TYPES.SIX_SEATER && f.model === 'Dzire'
+                    ? 'Ertiga'
+                    : e.target.value === VEHICLE_TYPES.FIVE_SEATER && f.model === 'Ertiga'
+                      ? 'Dzire'
+                      : f.model,
+              }))
+            }
+            options={VEHICLE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           />
           <Input
             label="Features (comma-separated)"
             value={form.features}
             onChange={(e) => setForm((f) => ({ ...f, features: e.target.value }))}
-          />
-          <Input
-            label="Rows"
-            type="number"
-            min={1}
-            max={8}
-            value={form.rows}
-            onChange={(e) => setForm((f) => ({ ...f, rows: e.target.value }))}
-          />
-          <Input
-            label="Seats per row"
-            type="number"
-            min={1}
-            max={4}
-            value={form.seatsPerRow}
-            onChange={(e) => setForm((f) => ({ ...f, seatsPerRow: e.target.value }))}
           />
           <Select
             label="Status"
@@ -278,10 +253,11 @@ export default function AdminVehiclesPage() {
 
         <div className="mt-4 rounded-lg border border-line bg-surface p-3">
           <p className="text-sm font-medium text-ink">
-            Seat config preview · capacity {seatConfiguration.length}
+            Cabin layout · {seatConfiguration.length} passenger seats
           </p>
           <p className="mt-1 text-xs text-ink-muted">
-            Generated labels: {seatConfiguration.map((s) => s.seatNumber).join(', ')}
+            {vehicleTypeLabel(form.vehicleType)} ·{' '}
+            {seatConfiguration.map((s) => s.seatNumber).join(', ')}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {seatConfiguration.map((s) => (

@@ -10,9 +10,12 @@ import {
   updateVehicleSchema,
   createRouteSchema,
   updateRouteSchema,
+  updateLocationSchema,
   createRideSchema,
   updateRideSchema,
   updateUserStatusSchema,
+  refundUpdateSchema,
+  paymentReviewSchema,
 } from '../validators/commonValidators.js';
 
 const router = Router();
@@ -46,6 +49,8 @@ router.patch('/vehicles/:id', validate(updateVehicleSchema), adminController.upd
 router.get('/routes', adminController.listRoutes);
 router.post('/routes', validate(createRouteSchema), adminController.createRoute);
 router.patch('/routes/:id', validate(updateRouteSchema), adminController.updateRoute);
+router.get('/locations', adminController.listLocations);
+router.patch('/locations/:id', validate(updateLocationSchema), adminController.updateLocation);
 
 // Rides
 router.get('/rides', adminController.listRides);
@@ -57,6 +62,8 @@ router.delete('/rides/:id', adminController.cancelRide);
 // Bookings / Payments
 router.get('/bookings', adminController.listBookings);
 router.get('/bookings/:id', adminController.getBooking);
+router.patch('/bookings/:id/refund', validate(refundUpdateSchema), adminController.updateRefund);
+router.post('/bookings/:id/resolve', validate(paymentReviewSchema), adminController.resolvePayment);
 router.get('/payments', adminController.listPayments);
 router.get('/payments/:id', adminController.getPayment);
 

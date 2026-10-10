@@ -1,6 +1,6 @@
 # Server
 
-Express API for the Local Scheduled Shared-Cab Booking Platform.
+Express API for RaahiX, scheduled intercity shared rides.
 
 ## Setup
 

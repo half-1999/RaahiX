@@ -2,20 +2,21 @@ import { cn } from '../../utils/cn';
 
 const variants = {
   primary:
-    'bg-brand text-white hover:bg-brand-dark focus-visible:ring-brand disabled:bg-brand/50',
+    'bg-brand bg-brand-gradient text-white shadow-[var(--shadow-lift)] hover:brightness-105 active:scale-[0.98] focus-visible:ring-brand',
   secondary:
-    'bg-surface-2 text-ink hover:bg-line focus-visible:ring-brand/40 disabled:opacity-50',
+    'bg-mist text-black hover:bg-indigo-soft focus-visible:ring-brand/40 active:scale-[0.98]',
   outline:
-    'border border-line bg-white text-ink hover:bg-surface-2 focus-visible:ring-brand/40',
-  ghost: 'text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:ring-brand/30',
-  danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger',
-  accent: 'bg-accent text-white hover:bg-accent/90 focus-visible:ring-accent',
+    'border border-line bg-white text-black hover:border-brand/40 hover:bg-mist focus-visible:ring-brand/40 active:scale-[0.98]',
+  ghost: 'text-black hover:bg-mist hover:text-black focus-visible:ring-brand/30',
+  danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger active:scale-[0.98]',
+  accent:
+    'bg-coral text-white hover:brightness-105 focus-visible:ring-coral active:scale-[0.98]',
 };
 
 const sizes = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-11 px-4 text-sm',
-  lg: 'h-12 px-5 text-base',
+  sm: 'h-9 rounded-xl px-3 text-sm',
+  md: 'h-11 rounded-xl px-4 text-sm',
+  lg: 'h-12 rounded-2xl px-5 text-base',
 };
 
 export default function Button({
@@ -33,7 +34,7 @@ export default function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         sizes[size],
         className

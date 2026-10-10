@@ -1,4 +1,5 @@
 import { Ride } from '../models/Ride.js';
+import { Review } from '../models/Review.js';
 import { Route } from '../models/Route.js';
 import { Driver } from '../models/Driver.js';
 import { Vehicle } from '../models/Vehicle.js';
@@ -7,6 +8,8 @@ import {
   BOOKING_PAYMENT_STATUS,
   BOOKING_STATUS,
   DRIVER_STATUS,
+  DRIVER_VERIFICATION,
+  BOOKABLE_RIDE_STATUSES,
   RIDE_STATUS,
   SEAT_STATUS,
   VEHICLE_STATUS,
@@ -15,8 +18,10 @@ import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
-import { writeAudit } from './auditService.js';
+import { requireReason, writeAudit } from './auditService.js';
+import { isForwardCitySegment, legsFromStops, orderedStops, remainingForCities, stopsFromRoute } from './segmentService.js';
 import { releaseHold, releaseBookedSeats, recountAvailableSeats } from './seatService.js';
+import { normalizeVehicleType, VEHICLE_TYPES } from '../utils/vehicleLayouts.js';
 
 function initSeatsFromVehicle(vehicle) {
   return vehicle.seatConfiguration.map((cfg) => ({
@@ -52,6 +57,18 @@ async function validateAssignment(driverId, vehicleId, routeId) {
 
   if (!driver) {
     throw new AppError('Driver not found', { code: ErrorCodes.DRIVER_NOT_FOUND, statusCode: 404 });
+  }
+  if (driver.verificationStatus !== DRIVER_VERIFICATION.VERIFIED) {
+    throw new AppError('Only verified drivers can be assigned to a ride', {
+      code: ErrorCodes.DRIVER_NOT_VERIFIED,
+      statusCode: 403,
+    });
+  }
+  if (driver.status === DRIVER_STATUS.SUSPENDED) {
+    throw new AppError('Suspended drivers cannot be assigned to a ride', {
+      code: ErrorCodes.DRIVER_SUSPENDED,
+      statusCode: 403,
+    });
   }
   if (driver.status !== DRIVER_STATUS.ACTIVE) {
     throw new AppError('Driver must be ACTIVE', {
@@ -91,6 +108,7 @@ function toRideSummary(ride) {
     arrivalTime: ride.arrivalTime,
     pickupPoint: ride.pickupPoint,
     dropPoint: ride.dropPoint,
+    rideStops: ride.rideStops || [],
     pricePerSeat: ride.pricePerSeat,
     availableSeats: ride.availableSeats,
     totalSeats: ride.totalSeats,
@@ -104,6 +122,27 @@ function toRideSummary(ride) {
         }
       : undefined,
     vehicleType: vehicle?.vehicleType,
+    vehicle:
+      vehicle && typeof vehicle === 'object'
+        ? {
+            id: vehicle._id?.toString?.(),
+            vehicleType: vehicle.vehicleType,
+            make: vehicle.make,
+            model: vehicle.model,
+            capacity: vehicle.capacity,
+            features: vehicle.features || [],
+            registrationNumber: vehicle.registrationNumber,
+          }
+        : undefined,
+    driver:
+      ride.driverId && typeof ride.driverId === 'object'
+        ? {
+            id: ride.driverId._id?.toString?.(),
+            name: ride.driverId.name,
+            phone: ride.driverId.phone,
+            rating: ride.driverId.rating,
+          }
+        : undefined,
   };
 }
 
@@ -132,6 +171,8 @@ export async function createRide(payload, actor) {
     arrivalTime: new Date(arrivalTime),
     pickupPoint,
     dropPoint,
+    rideStops: stopsFromRoute(route),
+    legs: legsFromStops(stopsFromRoute(route), seats.length),
     pricePerSeat,
     totalSeats: vehicle.capacity,
     availableSeats: seats.length,
@@ -159,6 +200,7 @@ export async function createRide(payload, actor) {
 }
 
 export async function updateRide(rideId, updates, actor) {
+  const reason = requireReason(updates.reason);
   const ride = await Ride.findById(rideId);
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
@@ -246,6 +288,7 @@ export async function updateRide(rideId, updates, actor) {
       arrivalTime: ride.arrivalTime,
       status: ride.status,
     },
+    reason,
   });
 
   logger.info('ride.updated', { rideId: ride._id.toString() });
@@ -253,6 +296,7 @@ export async function updateRide(rideId, updates, actor) {
 }
 
 export async function cancelRide(rideId, actor, reason) {
+  const why = requireReason(reason);
   const ride = await Ride.findById(rideId);
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
@@ -271,24 +315,8 @@ export async function cancelRide(rideId, actor, reason) {
   ride.status = RIDE_STATUS.CANCELLED;
   await ride.save();
 
-  const bookings = await Booking.find({
-    rideId: ride._id,
-    bookingStatus: { $in: [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED] },
-  });
-
-  for (const booking of bookings) {
-    const wasPaid = booking.paymentStatus === BOOKING_PAYMENT_STATUS.PAID;
-    booking.bookingStatus = BOOKING_STATUS.CANCELLED;
-    booking.cancelledAt = new Date();
-    booking.cancellationReason = reason || 'Ride cancelled by admin';
-    if (wasPaid) {
-      booking.paymentStatus = BOOKING_PAYMENT_STATUS.REFUNDED;
-      await releaseBookedSeats(booking._id);
-    } else {
-      await releaseHold(booking.holdId);
-    }
-    await booking.save();
-  }
+  const { cancelBookingsForRide } = await import('./bookingService.js');
+  await cancelBookingsForRide(ride, { reason: why });
 
   // Release any remaining holds on the ride
   for (const seat of ride.seats) {
@@ -304,7 +332,8 @@ export async function cancelRide(rideId, actor, reason) {
     entityType: 'Ride',
     entityId: ride._id,
     oldValue: { status: oldStatus },
-    newValue: { status: RIDE_STATUS.CANCELLED, reason },
+    newValue: { status: RIDE_STATUS.CANCELLED },
+    reason: why,
   });
 
   logger.info('ride.cancelled', { rideId: ride._id.toString() });
@@ -320,37 +349,82 @@ export async function search({ originCity, destinationCity, date, passengers = 1
   }
 
   const pax = Math.max(1, Number(passengers) || 1);
-  const routes = await Route.find({
-    'origin.city': new RegExp(`^${escapeRegex(originCity)}$`, 'i'),
-    'destination.city': new RegExp(`^${escapeRegex(destinationCity)}$`, 'i'),
-    status: 'ACTIVE',
-  }).select('_id');
-
-  const routeIds = routes.map((r) => r._id);
-  if (routeIds.length === 0) {
-    return { rides: [] };
-  }
-
   const now = new Date();
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
-  // Filter by departureTime calendar day (UTC) — avoid timezone skew on separate `date` field
   const rides = await Ride.find({
-    routeId: { $in: routeIds },
-    status: RIDE_STATUS.SCHEDULED,
-    availableSeats: { $gte: pax },
+    status: { $in: BOOKABLE_RIDE_STATUSES },
     departureTime: { $gt: now, $gte: dayStart, $lte: dayEnd },
   })
     .populate('routeId')
-    .populate('vehicleId', 'vehicleType make model')
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber')
+    .populate('driverId', 'name phone rating')
     .sort({ departureTime: 1 })
     .lean();
 
-  return { rides: rides.map(toRideSummary) };
+  const matched = rides.filter((ride) => {
+    if (!isForwardCitySegment(orderedStops(ride), originCity, destinationCity)) return false;
+    const open = remainingForCities(ride, originCity, destinationCity);
+    return open >= pax;
+  });
+  const vehicleIds = [...new Set(matched.map((ride) => ride.vehicleId?._id).filter(Boolean))];
+  const ratingRows = vehicleIds.length
+    ? await Review.aggregate([
+        { $match: { vehicleId: { $in: vehicleIds } } },
+        { $group: { _id: '$vehicleId', average: { $avg: '$rating' }, count: { $sum: 1 } } },
+      ])
+    : [];
+  const ratingByVehicle = new Map(
+    ratingRows.map((row) => [String(row._id), { average: Math.round(row.average * 10) / 10, count: row.count }])
+  );
+  return {
+    rides: matched.map((ride) => {
+      const stats = ratingByVehicle.get(String(ride.vehicleId?._id));
+      return {
+        ...toRideSummary(ride),
+        segmentSeats: remainingForCities(ride, originCity, destinationCity),
+        rating: stats?.average ?? null,
+        reviewCount: stats?.count || 0,
+      };
+    }),
+  };
 }
 
-function escapeRegex(str) {
-  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export async function catalog() {
+  const now = new Date();
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  const rides = await Ride.find({
+    status: { $in: BOOKABLE_RIDE_STATUSES },
+    departureTime: { $gt: now },
+  })
+    .populate('routeId')
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber')
+    .populate('driverId', 'name phone rating')
+    .sort({ departureTime: 1 })
+    .limit(60)
+    .lean();
+
+  const summarized = rides.map((ride) => ({
+    ...toRideSummary(ride),
+    segmentSeats: ride.availableSeats,
+  }));
+  const routeMap = new Map();
+  for (const ride of summarized) {
+    const from = ride.route?.origin?.city || (typeof ride.route?.origin === 'string' ? ride.route.origin : '');
+    const to = ride.route?.destination?.city || (typeof ride.route?.destination === 'string' ? ride.route.destination : '');
+    if (!from || !to) continue;
+    const key = `${from}→${to}`;
+    const current = routeMap.get(key) || { from, to, rides: 0 };
+    current.rides += 1;
+    routeMap.set(key, current);
+  }
+
+  return {
+    today: summarized.filter((ride) => new Date(ride.departureTime) <= todayEnd),
+    upcoming: summarized.filter((ride) => new Date(ride.departureTime) > todayEnd).slice(0, 8),
+    routes: [...routeMap.values()].slice(0, 8),
+  };
 }
 
 export async function getRide(rideId) {
@@ -373,6 +447,7 @@ export async function getRide(rideId) {
     arrivalTime: ride.arrivalTime,
     pickupPoint: ride.pickupPoint,
     dropPoint: ride.dropPoint,
+    rideStops: ride.rideStops || [],
     pricePerSeat: ride.pricePerSeat,
     availableSeats: ride.availableSeats,
     totalSeats: ride.totalSeats,
@@ -392,12 +467,13 @@ export async function getRide(rideId) {
 }
 
 export async function getSeats(rideId) {
-  const ride = await Ride.findById(rideId).select('seats status');
+  const ride = await Ride.findById(rideId).select('seats status vehicleId').populate('vehicleId', 'vehicleType');
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
   }
 
-  const seats = ride.seats.map((s) => ({
+  const sedan = normalizeVehicleType(ride.vehicleId?.vehicleType) === VEHICLE_TYPES.FIVE_SEATER;
+  const seats = ride.seats.filter((s) => !(sedan && s.seatNumber === 'C1')).map((s) => ({
     seatNumber: s.seatNumber,
     status: s.status === SEAT_STATUS.HELD ? SEAT_STATUS.HELD : s.status,
     row: s.row,

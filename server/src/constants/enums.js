@@ -34,12 +34,20 @@ export const ROUTE_STATUS = Object.freeze({
 });
 
 export const RIDE_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ACTIVE: 'ACTIVE',
   SCHEDULED: 'SCHEDULED',
   BOARDING: 'BOARDING',
   STARTED: 'STARTED',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 });
+
+export const BOOKABLE_RIDE_STATUSES = Object.freeze([
+  RIDE_STATUS.PUBLISHED,
+  RIDE_STATUS.SCHEDULED,
+]);
 
 export const SEAT_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE',
@@ -62,6 +70,21 @@ export const BOOKING_PAYMENT_STATUS = Object.freeze({
   REFUNDED: 'REFUNDED',
 });
 
+export const PROOF_STATUS = Object.freeze({
+  NOT_SUBMITTED: 'NOT_SUBMITTED',
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+});
+
+export const REFUND_STATUS = Object.freeze({
+  NOT_APPLICABLE: 'NOT_APPLICABLE',
+  PENDING: 'PENDING',
+  PARTIAL: 'PARTIAL',
+  COMPLETED: 'COMPLETED',
+  WAIVED: 'WAIVED',
+});
+
 export const PAYMENT_STATUS = Object.freeze({
   CREATED: 'CREATED',
   PENDING: 'PENDING',
@@ -74,6 +97,7 @@ export const NOTIFICATION_CHANNEL = Object.freeze({
   EMAIL: 'EMAIL',
   WHATSAPP: 'WHATSAPP',
   SMS: 'SMS',
+  IN_APP: 'IN_APP',
 });
 
 export const NOTIFICATION_STATUS = Object.freeze({

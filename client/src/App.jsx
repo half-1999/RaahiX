@@ -7,6 +7,7 @@ import PublicLayout from './components/layout/PublicLayout';
 import DriverLayout from './components/layout/DriverLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ScrollToTop from './components/common/ScrollToTop';
 
 import HomePage from './pages/public/HomePage';
 import SearchPage from './pages/public/SearchPage';
@@ -19,11 +20,16 @@ import BookingSuccessPage from './pages/customer/BookingSuccessPage';
 import BookingDetailPage from './pages/customer/BookingDetailPage';
 import MyBookingsPage from './pages/customer/MyBookingsPage';
 import ProfilePage from './pages/customer/ProfilePage';
+import NotificationsPage from './pages/customer/NotificationsPage';
 
 import DriverDashboardPage from './pages/driver/DriverDashboardPage';
 import DriverRidesPage from './pages/driver/DriverRidesPage';
 import DriverRideDetailPage from './pages/driver/DriverRideDetailPage';
 import DriverPassengersPage from './pages/driver/DriverPassengersPage';
+import DriverVehiclesPage from './pages/driver/DriverVehiclesPage';
+import DriverRoutesPage from './pages/driver/DriverRoutesPage';
+import DriverPaymentsPage from './pages/driver/DriverPaymentsPage';
+import DriverRefundsPage from './pages/driver/DriverRefundsPage';
 
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -56,6 +62,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route element={<PublicLayout />}>
                 <Route index element={<HomePage />} />
@@ -63,6 +70,7 @@ export default function App() {
                 <Route path="rides/:rideId" element={<RideDetailPage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="register/:role" element={<RegisterPage />} />
                 <Route
                   path="checkout"
                   element={
@@ -111,6 +119,14 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="notifications"
+                  element={
+                    <ProtectedRoute>
+                      <NotificationsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="home" element={<RoleHomeRedirect />} />
               </Route>
 
@@ -128,6 +144,10 @@ export default function App() {
                 <Route path="rides" element={<DriverRidesPage />} />
                 <Route path="rides/:rideId" element={<DriverRideDetailPage />} />
                 <Route path="rides/:rideId/passengers" element={<DriverPassengersPage />} />
+                <Route path="vehicles" element={<DriverVehiclesPage />} />
+                <Route path="routes" element={<DriverRoutesPage />} />
+                <Route path="payments" element={<DriverPaymentsPage />} />
+                <Route path="refunds" element={<DriverRefundsPage />} />
               </Route>
 
               <Route

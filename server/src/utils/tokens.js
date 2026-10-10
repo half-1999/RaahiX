@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 
-const SALT_ROUNDS = 12;
+// 10 rounds is plenty for MVP and keeps login/register responsive.
+const SALT_ROUNDS = 10;
 
 export async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -37,10 +39,20 @@ export function verifyRefreshToken(token) {
 }
 
 export async function hashToken(token) {
-  return bcrypt.hash(token, 10);
+  // SHA-256 — bcrypt on JWTs made every login/refresh multi-second slow.
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
 
 export async function compareToken(token, hash) {
   if (!hash) return false;
-  return bcrypt.compare(token, hash);
+  const next = await hashToken(token);
+  // Constant-time compare when both are hex strings of equal length
+  try {
+    const a = Buffer.from(String(hash), 'utf8');
+    const b = Buffer.from(String(next), 'utf8');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return hash === next;
+  }
 }

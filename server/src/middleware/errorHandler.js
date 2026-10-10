@@ -19,6 +19,12 @@ export function errorHandler(err, req, res, next) {
   let message = err.message || 'Something went wrong';
   let errors = err.errors || [];
 
+  if (err instanceof SyntaxError && 'body' in err) {
+    statusCode = 400;
+    code = ErrorCodes.VALIDATION_ERROR;
+    message = 'Invalid JSON body';
+  }
+
   if (err.name === 'ZodError') {
     statusCode = 400;
     code = ErrorCodes.VALIDATION_ERROR;
@@ -47,7 +53,7 @@ export function errorHandler(err, req, res, next) {
     message = 'Invalid identifier';
   }
 
-  if (!err.isOperational) {
+  if (!err.isOperational && !(err instanceof SyntaxError && 'body' in err) && err.name !== 'CastError') {
     logger.error('unhandled.error', {
       message: err.message,
       stack: config.env === 'development' ? err.stack : undefined,
@@ -56,6 +62,7 @@ export function errorHandler(err, req, res, next) {
     if (config.env !== 'development') {
       message = 'Internal server error';
       code = ErrorCodes.INTERNAL_ERROR;
+      statusCode = statusCode >= 400 && statusCode < 600 ? statusCode : 500;
     }
   }
 

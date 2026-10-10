@@ -61,7 +61,7 @@ export default function AdminLayout() {
       <div className="flex min-h-screen">
         <aside className="hidden w-60 shrink-0 border-r border-line bg-white p-4 lg:block">
           <Link to="/admin" className="mb-6 block font-display text-xl text-brand">
-            RouteSeat Ops
+            RaahiX Ops
           </Link>
           {nav}
         </aside>
@@ -102,7 +102,7 @@ export default function AdminLayout() {
           <button type="button" className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
           <aside className="relative z-10 h-full w-72 bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-lg text-brand">RouteSeat Ops</span>
+              <span className="font-display text-lg text-brand">RaahiX Ops</span>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close">
                 <X className="h-5 w-5" />
               </button>

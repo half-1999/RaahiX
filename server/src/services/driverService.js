@@ -4,7 +4,7 @@ import { User } from '../models/User.js';
 import { ROLES, USER_STATUS, DRIVER_STATUS, DRIVER_VERIFICATION } from '../constants/enums.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
-import { writeAudit } from './auditService.js';
+import { requireReason, writeAudit } from './auditService.js';
 
 export async function listDrivers(filters = {}) {
   const query = {};
@@ -73,7 +73,7 @@ export async function createDriver(payload, actor) {
       name,
       email: email.toLowerCase(),
       phone,
-      passwordHash: await bcrypt.hash(password, 12),
+      passwordHash: await bcrypt.hash(password, 10),
       role: ROLES.DRIVER,
       status: USER_STATUS.ACTIVE,
     });
@@ -113,6 +113,7 @@ export async function createDriver(payload, actor) {
 }
 
 export async function updateDriver(id, updates, actor) {
+  const reason = requireReason(updates.reason);
   const driver = await Driver.findById(id);
   if (!driver) {
     throw new AppError('Driver not found', { code: ErrorCodes.DRIVER_NOT_FOUND, statusCode: 404 });
@@ -146,6 +147,7 @@ export async function updateDriver(id, updates, actor) {
       verificationStatus: driver.verificationStatus,
       status: driver.status,
     },
+    reason,
   });
 
   return driver;

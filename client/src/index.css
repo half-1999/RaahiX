@@ -1,21 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap');
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fraunces', Georgia, serif;
-  --color-ink: #1a2332;
-  --color-ink-muted: #5c6b7a;
-  --color-surface: #f3f0ea;
-  --color-surface-2: #e8e2d6;
-  --color-brand: #0f6b5c;
-  --color-brand-dark: #0a4f44;
-  --color-brand-soft: #d7ebe6;
-  --color-accent: #c45c26;
-  --color-line: #d4cdc0;
-  --color-danger: #b42318;
-  --color-success: #067647;
-  --color-warning: #b54708;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy: #101828;
+  --color-indigo: #635bff;
+  --color-indigo-dark: #4f46e5;
+  --color-indigo-soft: #f0eeff;
+  --color-coral: #ff6b4a;
+  --color-coral-soft: #ffe8e1;
+  --color-ivory: #fff9f5;
+  --color-mist: #f0eeff;
+  --color-white: #ffffff;
+  --color-slate: #667085;
+  --color-line: #e4e7ec;
+
+  --color-ink: #101828;
+  --color-ink-muted: #667085;
+  --color-surface: #fff9f5;
+  --color-surface-2: #f0eeff;
+  --color-brand: #635bff;
+  --color-brand-dark: #4f46e5;
+  --color-brand-soft: #f0eeff;
+  --color-accent: #ff6b4a;
+  --color-danger: #d92d20;
+  --color-success: #079455;
+  --color-warning: #dc6803;
+
+  --shadow-soft: 0 8px 24px -12px rgb(16 24 40 / 0.18);
+  --shadow-lift: 0 18px 40px -20px rgb(99 91 255 / 0.35);
+  --radius-card: 16px;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -28,10 +48,89 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background: var(--color-surface);
+  background:
+    radial-gradient(ellipse 80% 50% at 100% -10%, rgb(99 91 255 / 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgb(255 107 74 / 0.06), transparent),
+    var(--color-surface);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .font-display {
   font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, #635bff, #8b7cff);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.card-surface {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-pad {
+  padding-block: 4.5rem;
+}
+
+@media (max-width: 768px) {
+  .section-pad {
+    padding-block: 3rem;
+  }
+}
+
+@keyframes seat-pop {
+  0% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.seat-selected-anim {
+  animation: seat-pop 220ms ease-out;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+
+@media print {
+  header,
+  footer,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .ticket-sheet {
+    box-shadow: none !important;
+    border: 1px solid #101828 !important;
+  }
 }

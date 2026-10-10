@@ -1,6 +1,9 @@
 import { api } from './api';
 
 export const rideService = {
+  catalog() {
+    return api.get('/rides/catalog').then((r) => r.data.data);
+  },
   search(params) {
     return api.get('/rides/search', { params }).then((r) => r.data.data);
   },

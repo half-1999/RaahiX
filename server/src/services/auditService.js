@@ -1,5 +1,18 @@
 import { AuditLog } from '../models/AuditLog.js';
 import { logger } from '../utils/logger.js';
+import { AppError } from '../utils/AppError.js';
+import { ErrorCodes } from '../constants/errorCodes.js';
+
+export function requireReason(reason) {
+  const value = String(reason || '').trim();
+  if (value.length < 3) {
+    throw new AppError('A reason is required', {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
+  return value;
+}
 
 /**
  * Persist an audit log entry. Best-effort: logs failures but does not throw
@@ -13,6 +26,7 @@ export async function writeAudit({
   entityId,
   oldValue = null,
   newValue = null,
+  reason = null,
   metadata = null,
 }) {
   const entry = await AuditLog.create({
@@ -23,6 +37,7 @@ export async function writeAudit({
     entityId: entityId?.toString?.() ?? String(entityId),
     oldValue,
     newValue,
+    reason,
     metadata,
   });
   logger.info('audit.written', { action, entityType, entityId: entry.entityId });

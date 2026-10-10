@@ -2,6 +2,11 @@ import * as rideService from '../services/rideService.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/response.js';
 
+export const catalog = asyncHandler(async (req, res) => {
+  const data = await rideService.catalog();
+  success(res, { message: 'Ride catalog fetched', data });
+});
+
 export const search = asyncHandler(async (req, res) => {
   const data = await rideService.search(req.query);
   success(res, { message: 'Rides fetched successfully', data });

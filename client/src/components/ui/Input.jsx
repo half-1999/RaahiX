@@ -5,21 +5,22 @@ export default function Input({
   error,
   hint,
   className,
+  inputClassName,
   id,
   ...props
 }) {
   const inputId = id || props.name;
   return (
-    <label className="block space-y-1.5">
+    <label className={cn('block space-y-1.5', className)}>
       {label ? (
         <span className="text-sm font-medium text-ink">{label}</span>
       ) : null}
       <input
         id={inputId}
         className={cn(
-          'h-11 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-ink-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-surface-2',
+          'h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-black placeholder:text-ink-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-surface-2 disabled:text-black/60',
           error && 'border-danger focus:border-danger focus:ring-danger/20',
-          className
+          inputClassName
         )}
         {...props}
       />

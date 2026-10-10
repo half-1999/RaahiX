@@ -12,14 +12,23 @@ import EmptyState from '../../components/ui/EmptyState';
 import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
 import Table from '../../components/ui/Table';
+import Pagination from '../../components/common/Pagination';
 import { cityLabel, entityId, formatCurrency, formatDateTime } from '../../utils/format';
 
 export default function AdminBookingsPage() {
   const [status, setStatus] = useState('');
+  const [refundStatus, setRefundStatus] = useState('');
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['admin', 'bookings', { status }],
-    queryFn: () => adminService.listBookings(status ? { status } : {}),
+    queryKey: ['admin', 'bookings', { status, refundStatus, page }],
+    queryFn: () =>
+      adminService.listBookings({
+        ...(status ? { status } : {}),
+        ...(refundStatus ? { refundStatus } : {}),
+        page,
+        limit: 10,
+      }),
   });
 
   const bookings = data?.bookings || [];
@@ -28,17 +37,35 @@ export default function AdminBookingsPage() {
     <div>
       <PageHeader title="Bookings" subtitle="All customer reservations" />
 
-      <div className="mb-4 max-w-xs">
+      <div className="mb-4 grid max-w-2xl gap-3 sm:grid-cols-2">
         <Select
           label="Status"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           options={[
             { value: '', label: 'All' },
             { value: 'PENDING', label: 'Pending' },
             { value: 'CONFIRMED', label: 'Confirmed' },
             { value: 'CANCELLED', label: 'Cancelled' },
             { value: 'EXPIRED', label: 'Expired' },
+          ]}
+        />
+        <Select
+          label="Refund"
+          value={refundStatus}
+          onChange={(e) => {
+            setRefundStatus(e.target.value);
+            setPage(1);
+          }}
+          options={[
+            { value: '', label: 'Any refund' },
+            { value: 'PENDING', label: 'Refund required' },
+            { value: 'PARTIAL', label: 'Partial' },
+            { value: 'COMPLETED', label: 'Completed' },
+            { value: 'NOT_APPLICABLE', label: 'Not applicable' },
           ]}
         />
       </div>
@@ -49,6 +76,7 @@ export default function AdminBookingsPage() {
       {!isLoading && !bookings.length ? (
         <EmptyState icon={ClipboardList} title="No bookings" />
       ) : (
+        <>
         <Table
           keyField="_id"
           columns={[
@@ -84,9 +112,15 @@ export default function AdminBookingsPage() {
               render: (row) => <StatusBadge status={row.bookingStatus} type="booking" />,
             },
             {
-              key: 'paymentStatus',
-              header: 'Payment',
-              render: (row) => <StatusBadge status={row.paymentStatus} type="payment" />,
+              key: 'proofStatus',
+              header: 'Proof',
+              render: (row) => row.proofStatus || '—',
+            },
+            {
+              key: 'refund',
+              header: 'Refund',
+              render: (row) =>
+                `${row.refundStatus || 'NOT_APPLICABLE'}${row.refundAmount ? ` ₹${row.refundAmount}` : ''}`,
             },
             {
               key: 'createdAt',
@@ -107,6 +141,8 @@ export default function AdminBookingsPage() {
           ]}
           rows={bookings}
         />
+        <Pagination page={data?.page || page} pages={data?.pages || 1} total={data?.total || 0} onPage={setPage} />
+        </>
       )}
     </div>
   );

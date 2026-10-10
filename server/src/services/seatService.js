@@ -2,10 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Ride } from '../models/Ride.js';
 import { Booking } from '../models/Booking.js';
 import { config } from '../config/index.js';
-import { BOOKING_STATUS, RIDE_STATUS, SEAT_STATUS } from '../constants/enums.js';
+import { BOOKABLE_RIDE_STATUSES, BOOKING_STATUS, RIDE_STATUS, SEAT_STATUS } from '../constants/enums.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
+import { releaseExpiredSegmentHolds, releaseSegmentHold } from './segmentService.js';
 
 export function recountAvailableSeats(seats) {
   return seats.filter((s) => s.status === SEAT_STATUS.AVAILABLE).length;
@@ -42,7 +43,7 @@ export async function holdSeats(userId, rideId, seatNumbers) {
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
   }
-  if (ride.status !== RIDE_STATUS.SCHEDULED) {
+  if (!BOOKABLE_RIDE_STATUSES.includes(ride.status)) {
     throw new AppError('Ride is not available for booking', {
       code: ErrorCodes.RIDE_NOT_AVAILABLE,
       statusCode: 400,
@@ -65,7 +66,7 @@ export async function holdSeats(userId, rideId, seatNumbers) {
   const updated = await Ride.findOneAndUpdate(
     {
       _id: rideId,
-      status: RIDE_STATUS.SCHEDULED,
+      status: { $in: BOOKABLE_RIDE_STATUSES },
       seats: {
         $all: uniqueSeats.map((seatNumber) => ({
           $elemMatch: { seatNumber, status: SEAT_STATUS.AVAILABLE },
@@ -127,12 +128,7 @@ export async function holdSeats(userId, rideId, seatNumbers) {
     holdId,
     holdExpiresAt,
     rideId: updated._id.toString(),
-    seats: held.map((s) => ({
-      seatNumber: s.seatNumber,
-      status: s.status,
-      row: s.row,
-      position: s.position,
-    })),
+    seats: uniqueSeats,
   };
 }
 
@@ -160,6 +156,9 @@ export async function releaseHold(holdId) {
       released += changed;
     }
   }
+
+  const segment = await releaseSegmentHold(holdId, ['ACTIVE', 'CONFIRMED']);
+  released += segment.released;
 
   if (released > 0) {
     logger.info('seat.released', { holdId, released });
@@ -216,6 +215,9 @@ export async function releaseExpiredHolds() {
       }
     );
   }
+
+  const segment = await releaseExpiredSegmentHolds();
+  seatsReleased += segment.released;
 
   if (seatsReleased > 0) {
     logger.info('seat.expired_released', {

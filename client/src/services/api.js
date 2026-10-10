@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 20000,
 });
 
 api.interceptors.request.use((config) => {
@@ -39,9 +40,12 @@ api.interceptors.response.use(
         return api(original);
       } catch (refreshError) {
         refreshing = null;
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        // Only wipe session when refresh is definitely unauthorized.
+        if (refreshError?.response?.status === 401 || refreshError?.response?.status === 403) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+        }
         return Promise.reject(refreshError);
       }
     }

@@ -3,10 +3,16 @@ import { Driver } from '../models/Driver.js';
 import { Ride } from '../models/Ride.js';
 import { Booking } from '../models/Booking.js';
 import { Payment } from '../models/Payment.js';
+import { Vehicle } from '../models/Vehicle.js';
 import {
   BOOKING_STATUS,
+  DRIVER_VERIFICATION,
   PAYMENT_STATUS,
+  PROOF_STATUS,
+  REFUND_STATUS,
   RIDE_STATUS,
+  ROLES,
+  VEHICLE_STATUS,
 } from '../constants/enums.js';
 
 function startOfToday() {
@@ -32,6 +38,13 @@ export async function dashboard() {
     bookingsToday,
     revenueAgg,
     pendingPayments,
+    customers,
+    verifiedDrivers,
+    activeVehicles,
+    upcomingRides,
+    pendingBookings,
+    pendingProofs,
+    pendingRefunds,
   ] = await Promise.all([
     User.countDocuments(),
     Driver.countDocuments(),
@@ -54,6 +67,16 @@ export async function dashboard() {
     Payment.countDocuments({
       status: { $in: [PAYMENT_STATUS.CREATED, PAYMENT_STATUS.PENDING] },
     }),
+    User.countDocuments({ role: ROLES.CUSTOMER }),
+    Driver.countDocuments({ verificationStatus: DRIVER_VERIFICATION.VERIFIED }),
+    Vehicle.countDocuments({ status: VEHICLE_STATUS.ACTIVE }),
+    Ride.countDocuments({
+      departureTime: { $gt: to },
+      status: { $ne: RIDE_STATUS.CANCELLED },
+    }),
+    Booking.countDocuments({ bookingStatus: BOOKING_STATUS.PENDING }),
+    Booking.countDocuments({ proofStatus: PROOF_STATUS.SUBMITTED }),
+    Booking.countDocuments({ refundStatus: REFUND_STATUS.PENDING }),
   ]);
 
   return {
@@ -63,6 +86,13 @@ export async function dashboard() {
     bookingsToday,
     revenueToday: revenueAgg[0]?.total || 0,
     pendingPayments,
+    customers,
+    verifiedDrivers,
+    activeVehicles,
+    upcomingRides,
+    pendingBookings,
+    pendingProofs,
+    pendingRefunds,
   };
 }
 

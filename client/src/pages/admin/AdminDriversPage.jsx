@@ -23,6 +23,7 @@ const emptyForm = {
   licenseNumber: '',
   verificationStatus: 'VERIFIED',
   status: 'ACTIVE',
+  reason: '',
 };
 
 export default function AdminDriversPage() {
@@ -49,6 +50,7 @@ export default function AdminDriversPage() {
           licenseNumber: form.licenseNumber,
           verificationStatus: form.verificationStatus,
           status: form.status,
+          reason: form.reason,
         });
       }
       return adminService.createDriver({
@@ -210,6 +212,14 @@ export default function AdminDriversPage() {
             value={form.licenseNumber}
             onChange={(e) => setForm((f) => ({ ...f, licenseNumber: e.target.value }))}
           />
+          {editing ? (
+            <Input
+              label="Reason"
+              value={form.reason}
+              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+              required
+            />
+          ) : null}
           <Select
             label="Verification"
             value={form.verificationStatus}

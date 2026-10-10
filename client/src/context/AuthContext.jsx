@@ -9,12 +9,25 @@ import {
 
 const AuthContext = createContext(null);
 
+function unwrapUser(payload) {
+  if (!payload) return null;
+  if (payload.user && (payload.user.id || payload.user._id || payload.user.email)) {
+    return payload.user;
+  }
+  return payload;
+}
+
+function isAuthFailure(err) {
+  const status = err?.response?.status;
+  return status === 401 || status === 403;
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getStoredUser());
+  const [user, setUser] = useState(() => unwrapUser(getStoredUser()));
   const [loading, setLoading] = useState(() => Boolean(getAccessToken()));
 
   const applySession = useCallback((data) => {
-    const nextUser = data.user || data;
+    const nextUser = unwrapUser(data.user || data);
     setSession({
       user: nextUser,
       accessToken: data.accessToken,
@@ -33,13 +46,20 @@ export function AuthProvider({ children }) {
     }
     try {
       const me = await authService.me();
-      setSession({ user: me });
-      setUser(me);
-      return me;
-    } catch {
-      clearSession();
-      setUser(null);
-      return null;
+      const nextUser = unwrapUser(me);
+      setSession({ user: nextUser });
+      setUser(nextUser);
+      return nextUser;
+    } catch (err) {
+      // Keep local session on network / 5xx so users are not forced to re-login.
+      if (isAuthFailure(err)) {
+        clearSession();
+        setUser(null);
+        return null;
+      }
+      const cached = unwrapUser(getStoredUser());
+      if (cached) setUser(cached);
+      return cached;
     } finally {
       setLoading(false);
     }
@@ -65,6 +85,22 @@ export function AuthProvider({ children }) {
     [applySession]
   );
 
+  const registerDriver = useCallback(
+    async (payload) => {
+      const data = await authService.registerDriver(payload);
+      return applySession(data);
+    },
+    [applySession]
+  );
+
+  const updateProfile = useCallback(async (payload) => {
+    const data = await authService.updateProfile(payload);
+    const nextUser = unwrapUser(data);
+    setSession({ user: nextUser });
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
@@ -81,14 +117,16 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(user && getAccessToken()),
       login,
       register,
+      registerDriver,
+      updateProfile,
       logout,
       refreshMe,
       setUser,
     }),
-    [user, loading, login, register, logout, refreshMe]
+    [user, loading, login, register, registerDriver, updateProfile, logout, refreshMe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,13 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Download, Share2, Ticket } from 'lucide-react';
 import { bookingService } from '../../services/bookingService';
 import WhatsAppAction from '../../components/booking/WhatsAppAction';
+import BookingStepper from '../../components/booking/BookingStepper';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import Skeleton from '../../components/ui/Skeleton';
-import { cityLabel, entityId, formatCurrency, formatDate, formatTime } from '../../utils/format';
+import {
+  cityLabel,
+  entityId,
+  formatCurrency,
+  formatDate,
+  formatDuration,
+  formatTime,
+} from '../../utils/format';
+import { cabDisplayName, seatMeta } from '../../utils/ridePresentation';
+import { normalizeBooking } from '../../utils/bookingNormalize';
 
 export default function BookingSuccessPage() {
   const location = useLocation();
@@ -19,7 +29,7 @@ export default function BookingSuccessPage() {
     enabled: Boolean(bookingId),
   });
 
-  const booking = data?.booking || data || location.state?.booking;
+  const booking = normalizeBooking(data?.booking || data || location.state?.booking);
   const ride = booking?.ride;
 
   if (!bookingId && !booking) {
@@ -37,7 +47,7 @@ export default function BookingSuccessPage() {
 
   if (isLoading && !booking) {
     return (
-      <div className="mx-auto max-w-lg space-y-3 px-4 py-12">
+      <div className="mx-auto max-w-2xl space-y-3 px-4 py-12">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -53,54 +63,132 @@ export default function BookingSuccessPage() {
   }
 
   const seats = booking.selectedSeats || booking.passengers?.map((p) => p.seatNumber) || [];
+  const origin = ride?.route?.origin || ride?.origin;
+  const destination = ride?.route?.destination || ride?.destination;
+  const destLabel = cityLabel(destination);
+  const duration = ride?.route?.estimatedDuration || ride?.estimatedDuration;
+  const primarySeat = seats[0];
+  const meta = primarySeat ? seatMeta(primarySeat) : null;
+
+  const share = async () => {
+    const text = `RaahiX booking ${booking.bookingNumber}: ${cityLabel(origin)} → ${destLabel}, seat ${seats.join(', ')}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'RaahiX booking', text });
+      } catch {
+        /* dismissed */
+      }
+    } else {
+      await navigator.clipboard?.writeText(text);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-12">
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <BookingStepper current="confirmed" className="mb-6" />
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl border border-success/20 bg-white p-6 text-center shadow-sm"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-lift)]"
       >
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
-          <CheckCircle2 className="h-8 w-8" />
+        <div className="bg-brand-gradient px-6 py-8 text-center text-white">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <h1 className="mt-4 font-display text-3xl font-bold text-balance">
+            You&apos;re all set for {destLabel.split(',')[0]}
+          </h1>
+          <p className="mt-2 text-sm text-white/80">Booking ID</p>
+          <p className="mt-1 font-mono text-lg font-semibold tracking-wide">
+            {booking.bookingNumber || entityId(booking)}
+          </p>
         </div>
-        <h1 className="mt-4 font-display text-3xl text-ink">Booking confirmed</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Confirmation email is on the way. Keep this booking number handy.
-        </p>
-        <p className="mt-4 font-mono text-lg font-semibold text-brand">
-          {booking.bookingNumber || entityId(booking)}
-        </p>
-        <dl className="mt-6 space-y-2 text-left text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-muted">Route</dt>
-            <dd className="font-medium">
-              {cityLabel(ride?.route?.origin || ride?.origin)} →{' '}
-              {cityLabel(ride?.route?.destination || ride?.destination)}
-            </dd>
+
+        <div className="p-6">
+          <div className="rounded-2xl bg-mist/80 px-4 py-5">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate">
+                  {cityLabel(origin).split(',')[0]}
+                </p>
+                <p className="mt-1 font-display text-2xl font-bold text-navy">
+                  {formatTime(ride?.departureTime)}
+                </p>
+              </div>
+              <div className="px-2">
+                <div className="h-px w-16 bg-brand sm:w-24" />
+                <p className="mt-1 text-[11px] font-semibold text-brand">
+                  {duration ? formatDuration(duration) : 'Direct'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate">
+                  {destLabel.split(',')[0]}
+                </p>
+                <p className="mt-1 font-display text-2xl font-bold text-navy">
+                  {formatTime(ride?.arrivalTime)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-center text-xs text-slate">
+              {formatDate(ride?.date || ride?.departureTime)}
+            </p>
           </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-muted">When</dt>
-            <dd className="font-medium">
-              {formatDate(ride?.date || ride?.departureTime)} {formatTime(ride?.departureTime)}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-muted">Seats</dt>
-            <dd className="font-medium">{seats.join(', ')}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-muted">Paid</dt>
-            <dd className="font-medium">{formatCurrency(booking.totalAmount)}</dd>
-          </div>
-        </dl>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <WhatsAppAction booking={booking} />
-          <Link to={`/booking/${entityId(booking)}`}>
-            <Button variant="outline" className="w-full">
-              Booking details
+
+          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border border-line p-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Cab</dt>
+              <dd className="mt-1 font-semibold text-navy">
+                {cabDisplayName(ride)}
+                {ride?.vehicle?.registrationNumber ? ` · ${ride.vehicle.registrationNumber}` : ''}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-line p-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Driver</dt>
+              <dd className="mt-1 font-semibold text-navy">
+                {ride?.driver?.name || 'Assigned driver'}
+                {ride?.driver?.phone ? ` · ${ride.driver.phone}` : ''}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-line p-3 sm:col-span-2">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Seats and passengers</dt>
+              <dd className="mt-1 font-semibold text-navy">
+                {(booking.passengers || []).length
+                  ? booking.passengers
+                      .map((passenger) => `${passenger.seatNumber} ${passenger.name || ''}`.trim())
+                      .join(' · ')
+                  : seats.join(', ')}
+                {meta ? ` · ${meta.label}` : ''}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-line p-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Paid</dt>
+              <dd className="mt-1 font-display text-xl font-bold text-brand">
+                {formatCurrency(booking.totalAmount)}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="print-hide mt-6 flex flex-col gap-2 sm:flex-row">
+            <Link to={`/booking/${entityId(booking)}`} className="flex-1">
+              <Button className="w-full" variant="primary">
+                <Ticket className="h-4 w-4" />
+                View ticket
+              </Button>
+            </Link>
+            <Button variant="outline" className="flex-1" onClick={() => window.print()}>
+              <Download className="h-4 w-4" />
+              Print / Save PDF
             </Button>
-          </Link>
+            <Button variant="secondary" className="flex-1" onClick={share}>
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+          </div>
+
+          <div className="print-hide mt-4 flex justify-center">
+            <WhatsAppAction booking={booking} />
+          </div>
         </div>
       </motion.div>
     </div>

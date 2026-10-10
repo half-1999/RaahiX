@@ -2,11 +2,13 @@ import * as userAdminService from '../services/userAdminService.js';
 import * as driverService from '../services/driverService.js';
 import * as vehicleService from '../services/vehicleService.js';
 import * as routeService from '../services/routeService.js';
+import * as locationService from '../services/locationService.js';
 import * as rideService from '../services/rideService.js';
 import * as bookingService from '../services/bookingService.js';
 import * as paymentService from '../services/paymentService.js';
 import * as reportService from '../services/reportService.js';
 import * as auditService from '../services/auditService.js';
+import * as paymentProofService from '../services/paymentProofService.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/response.js';
 
@@ -27,7 +29,12 @@ export const getUser = asyncHandler(async (req, res) => {
 });
 
 export const updateUserStatus = asyncHandler(async (req, res) => {
-  const user = await userAdminService.updateUserStatus(req.params.id, req.body.status, req.user);
+  const user = await userAdminService.updateUserStatus(
+    req.params.id,
+    req.body.status,
+    req.user,
+    req.body.reason
+  );
   success(res, { message: 'User status updated', data: { user } });
 });
 
@@ -89,6 +96,16 @@ export const updateRoute = asyncHandler(async (req, res) => {
   success(res, { message: 'Route updated', data: { route } });
 });
 
+export const listLocations = asyncHandler(async (req, res) => {
+  const data = await locationService.listLocations();
+  success(res, { message: 'Locations fetched', data });
+});
+
+export const updateLocation = asyncHandler(async (req, res) => {
+  const location = await locationService.updateLocation(req.params.id, req.body, req.user);
+  success(res, { message: 'Location updated', data: { location } });
+});
+
 // Rides
 export const listRides = asyncHandler(async (req, res) => {
   const data = await rideService.listRidesAdmin(req.query);
@@ -124,6 +141,16 @@ export const listBookings = asyncHandler(async (req, res) => {
 export const getBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.getById(req.params.id, req.user);
   success(res, { message: 'Booking fetched', data: { booking } });
+});
+
+export const updateRefund = asyncHandler(async (req, res) => {
+  const booking = await bookingService.updateRefund(req.user, req.params.id, req.body);
+  success(res, { message: 'Refund updated', data: { booking } });
+});
+
+export const resolvePayment = asyncHandler(async (req, res) => {
+  const booking = await paymentProofService.adminResolve(req.user, req.params.id, req.body);
+  success(res, { message: 'Payment resolved', data: { booking } });
 });
 
 export const listPayments = asyncHandler(async (req, res) => {

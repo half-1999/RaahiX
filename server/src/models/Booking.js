@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { BOOKING_PAYMENT_STATUS, BOOKING_STATUS } from '../constants/enums.js';
+import { BOOKING_PAYMENT_STATUS, BOOKING_STATUS, PROOF_STATUS, REFUND_STATUS } from '../constants/enums.js';
 
 const passengerSchema = new mongoose.Schema(
   {
@@ -16,6 +16,10 @@ const bookingSchema = new mongoose.Schema(
     bookingNumber: { type: String, required: true, unique: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     rideId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ride', required: true },
+    pickupLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null },
+    dropLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null },
+    pickupName: { type: String, default: null },
+    dropName: { type: String, default: null },
     passengers: { type: [passengerSchema], required: true },
     selectedSeats: { type: [String], required: true },
     passengerCount: { type: Number, required: true, min: 1 },
@@ -36,6 +40,28 @@ const bookingSchema = new mongoose.Schema(
     holdExpiresAt: { type: Date, required: true },
     cancellationReason: { type: String, default: null },
     cancelledAt: { type: Date, default: null },
+    proofStatus: {
+      type: String,
+      enum: Object.values(PROOF_STATUS),
+      default: PROOF_STATUS.NOT_SUBMITTED,
+    },
+    proofSubmittedAt: { type: Date, default: null },
+    proofSubmittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    proofAmount: { type: Number, default: null },
+    proofFile: { type: String, default: null },
+    proofMime: { type: String, default: null },
+    proofReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    proofReviewedAt: { type: Date, default: null },
+    proofRejectionReason: { type: String, default: null },
+    refundAmount: { type: Number, default: 0, min: 0 },
+    refundStatus: {
+      type: String,
+      enum: Object.values(REFUND_STATUS),
+      default: REFUND_STATUS.NOT_APPLICABLE,
+    },
+    refundProcessedAt: { type: Date, default: null },
+    refundProcessedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    refundReference: { type: String, default: null },
   },
   { timestamps: true }
 );

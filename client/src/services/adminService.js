@@ -12,8 +12,8 @@ export const adminService = {
   getUser(id) {
     return api.get(`/admin/users/${id}`).then((r) => r.data.data);
   },
-  updateUserStatus(id, status) {
-    return api.patch(`/admin/users/${id}/status`, { status }).then((r) => r.data.data);
+  updateUserStatus(id, status, reason) {
+    return api.patch(`/admin/users/${id}/status`, { status, reason }).then((r) => r.data.data);
   },
 
   // Drivers
@@ -68,8 +68,11 @@ export const adminService = {
   updateRide(id, payload) {
     return api.patch(`/admin/rides/${id}`, payload).then((r) => r.data.data);
   },
-  cancelRide(id) {
-    return api.patch(`/admin/rides/${id}`, { status: 'CANCELLED' }).then((r) => r.data.data);
+  cancelRide(id, reason) {
+    return api.patch(`/admin/rides/${id}`, { status: 'CANCELLED', reason }).then((r) => r.data.data);
+  },
+  updateRefund(id, payload) {
+    return api.patch(`/admin/bookings/${id}/refund`, payload).then((r) => r.data.data);
   },
 
   // Bookings / Payments

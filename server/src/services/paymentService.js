@@ -10,7 +10,6 @@ import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
 import { getGateway } from './payment/gateway.js';
-import { confirmSeatsBooked } from './seatService.js';
 import * as notificationService from './notificationService.js';
 
 async function confirmPaymentSuccess({ payment, booking, gatewayPaymentId, gatewaySignature, raw }) {
@@ -50,29 +49,13 @@ async function confirmPaymentSuccess({ payment, booking, gatewayPaymentId, gatew
     : payment.rawResponse;
   await payment.save();
 
-  booking.bookingStatus = BOOKING_STATUS.CONFIRMED;
-  booking.paymentStatus = BOOKING_PAYMENT_STATUS.PAID;
-  await booking.save();
-
-  await confirmSeatsBooked(booking.holdId, booking._id, booking.userId);
-
-  logger.info('payment.success', {
+  logger.info('payment.recorded', {
     paymentId: payment._id.toString(),
     bookingId: booking._id.toString(),
   });
-  logger.info('booking.confirmed', { bookingId: booking._id.toString() });
 
-  // Notifications must never undo payment/booking success
-  try {
-    await notificationService.sendBookingConfirmation(booking);
-  } catch (err) {
-    logger.warn('notification.failed', {
-      type: 'BOOKING_CONFIRMATION',
-      message: err.message,
-    });
-  }
-
-  return { payment, booking, alreadyProcessed: false };
+  const freshBooking = await Booking.findById(booking._id);
+  return { payment, booking: freshBooking, alreadyProcessed: false };
 }
 
 export async function createOrder(userId, { bookingId }) {
@@ -110,37 +93,78 @@ export async function createOrder(userId, { bookingId }) {
     });
   }
 
-  // Reuse existing open payment if present
+  const gateway = getGateway();
+
+  // Prefer an open payment; otherwise recycle the latest FAILED row for this booking.
   let payment = await Payment.findOne({
     bookingId: booking._id,
     status: { $in: [PAYMENT_STATUS.CREATED, PAYMENT_STATUS.PENDING] },
-  });
-
-  const gateway = getGateway();
+  }).sort({ createdAt: -1 });
 
   if (!payment) {
+    const failed = await Payment.findOne({
+      bookingId: booking._id,
+      status: PAYMENT_STATUS.FAILED,
+    }).sort({ createdAt: -1 });
+
     const order = await gateway.createOrder({
       amount: booking.totalAmount,
       currency: booking.currency || 'INR',
       receipt: booking.bookingNumber,
     });
 
-    payment = await Payment.create({
-      bookingId: booking._id,
-      userId,
-      amount: booking.totalAmount,
-      currency: booking.currency || 'INR',
-      gateway: gateway.name,
-      gatewayOrderId: order.id,
-      status: PAYMENT_STATUS.PENDING,
-      rawResponse: { orderId: order.id },
-    });
+    if (failed) {
+      failed.amount = booking.totalAmount;
+      failed.currency = booking.currency || 'INR';
+      failed.gateway = gateway.name;
+      failed.gatewayOrderId = order.id;
+      failed.status = PAYMENT_STATUS.PENDING;
+      failed.gatewayPaymentId = undefined;
+      failed.gatewaySignature = undefined;
+      failed.paidAt = undefined;
+      failed.rawResponse = { orderId: order.id, retriedAt: new Date().toISOString() };
+      failed.markModified('gatewayPaymentId');
+      await failed.save();
+      // Ensure null/empty values are removed so sparse unique index stays clean
+      await Payment.updateOne(
+        { _id: failed._id },
+        { $unset: { gatewayPaymentId: 1, gatewaySignature: 1, paidAt: 1 } }
+      );
+      payment = await Payment.findById(failed._id);
+      logger.info('payment.retried', {
+        paymentId: payment._id.toString(),
+        bookingId: booking._id.toString(),
+        gatewayOrderId: order.id,
+      });
+    } else {
+      payment = await Payment.create({
+        bookingId: booking._id,
+        userId,
+        amount: booking.totalAmount,
+        currency: booking.currency || 'INR',
+        gateway: gateway.name,
+        gatewayOrderId: order.id,
+        status: PAYMENT_STATUS.PENDING,
+        rawResponse: { orderId: order.id },
+      });
+      // Never persist gatewayPaymentId:null — breaks sparse unique indexes on some engines.
+      await Payment.updateOne(
+        { _id: payment._id },
+        { $unset: { gatewayPaymentId: 1, gatewaySignature: 1 } }
+      );
+      payment = await Payment.findById(payment._id);
 
-    logger.info('payment.created', {
-      paymentId: payment._id.toString(),
-      bookingId: booking._id.toString(),
-      gatewayOrderId: order.id,
-    });
+      logger.info('payment.created', {
+        paymentId: payment._id.toString(),
+        bookingId: booking._id.toString(),
+        gatewayOrderId: order.id,
+      });
+    }
+  }
+
+  if (booking.paymentStatus === BOOKING_PAYMENT_STATUS.FAILED) {
+    booking.paymentStatus = BOOKING_PAYMENT_STATUS.PENDING;
+    await booking.save();
   }
 
   const response = {

@@ -2,10 +2,12 @@ import { Booking } from '../models/Booking.js';
 import { Ride } from '../models/Ride.js';
 import { Payment } from '../models/Payment.js';
 import {
+  BOOKABLE_RIDE_STATUSES,
   BOOKING_PAYMENT_STATUS,
   BOOKING_STATUS,
   PAYMENT_STATUS,
   RIDE_STATUS,
+  REFUND_STATUS,
   ROLES,
   SEAT_STATUS,
 } from '../constants/enums.js';
@@ -13,7 +15,14 @@ import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
 import { holdSeats, releaseHold, releaseBookedSeats } from './seatService.js';
-import { writeAudit } from './auditService.js';
+import {
+  assertForwardSegment,
+  holdSegment,
+  orderedStops,
+  usesSegmentInventory,
+} from './segmentService.js';
+import { requireReason, writeAudit } from './auditService.js';
+import { applyObligation, obligationPercent } from './refundService.js';
 import * as notificationService from './notificationService.js';
 
 function generateBookingNumber() {
@@ -22,11 +31,22 @@ function generateBookingNumber() {
   return `BK${ts}${rnd}`;
 }
 
-export async function hold(userId, { rideId, seatNumbers }) {
+export async function hold(userId, { rideId, seatNumbers, pickupLocationId, dropLocationId }) {
+  const ride = await Ride.findById(rideId);
+  if (!ride) {
+    throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
+  }
+  if (usesSegmentInventory(ride)) {
+    return holdSegment(userId, rideId, {
+      seatCount: seatNumbers.length,
+      pickupLocationId,
+      dropLocationId,
+    });
+  }
   return holdSeats(userId, rideId, seatNumbers);
 }
 
-export async function createFromHold(userId, { rideId, holdId, passengers }) {
+export async function createFromHold(userId, { rideId, holdId, passengers, pickupLocationId, dropLocationId }) {
   if (!holdId || !rideId || !Array.isArray(passengers) || passengers.length === 0) {
     throw new AppError('rideId, holdId and passengers are required', {
       code: ErrorCodes.VALIDATION_ERROR,
@@ -38,11 +58,64 @@ export async function createFromHold(userId, { rideId, holdId, passengers }) {
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
   }
-  if (ride.status !== RIDE_STATUS.SCHEDULED) {
+  if (!BOOKABLE_RIDE_STATUSES.includes(ride.status)) {
     throw new AppError('Ride is not available for booking', {
       code: ErrorCodes.RIDE_NOT_AVAILABLE,
       statusCode: 400,
     });
+  }
+
+  const segmentHold = (ride.segmentHolds || []).find((item) => item.holdId === holdId);
+  if (segmentHold) {
+    const existingSegmentBooking = await Booking.findOne({
+      holdId,
+      bookingStatus: { $in: [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED] },
+    });
+    if (existingSegmentBooking) {
+      throw new AppError('A booking already exists for this hold', {
+        code: ErrorCodes.CONFLICT,
+        statusCode: 409,
+      });
+    }
+    if (passengers.length !== segmentHold.seatCount) {
+      throw new AppError('Passenger count must match held seats', {
+        code: ErrorCodes.VALIDATION_ERROR,
+        statusCode: 400,
+      });
+    }
+    if (segmentHold.status !== 'ACTIVE' || String(segmentHold.userId) !== String(userId)) {
+      throw new AppError('Invalid or expired seat hold', {
+        code: ErrorCodes.SEAT_HOLD_INVALID,
+        statusCode: 400,
+      });
+    }
+    if (!segmentHold.holdExpiresAt || segmentHold.holdExpiresAt < new Date()) {
+      throw new AppError('Seat hold has expired', {
+        code: ErrorCodes.SEAT_HOLD_EXPIRED,
+        statusCode: 400,
+      });
+    }
+    const booking = await Booking.create({
+      bookingNumber: generateBookingNumber(),
+      userId,
+      rideId: ride._id,
+      pickupLocationId: segmentHold.pickupLocationId,
+      dropLocationId: segmentHold.dropLocationId,
+      pickupName: orderedStops(ride).find((stop) => stop.sequence === segmentHold.pickupSequence)?.name || null,
+      dropName: orderedStops(ride).find((stop) => stop.sequence === segmentHold.dropSequence)?.name || null,
+      passengers,
+      selectedSeats: passengers.map((passenger) => passenger.seatNumber),
+      passengerCount: passengers.length,
+      amountPerSeat: ride.pricePerSeat,
+      totalAmount: ride.pricePerSeat * passengers.length,
+      currency: 'INR',
+      holdId,
+      holdExpiresAt: segmentHold.holdExpiresAt,
+    });
+    notificationService.notifyBookingCreated(booking).catch((err) => {
+      logger.warn('notification.failed', { type: 'BOOKING_CREATED', message: err.message });
+    });
+    return booking;
   }
 
   const heldSeats = ride.seats.filter((s) => s.holdId === holdId);
@@ -104,6 +177,10 @@ export async function createFromHold(userId, { rideId, holdId, passengers }) {
     });
   }
 
+  const segment = orderedStops(ride).some((stop) => stop.locationId)
+    ? assertForwardSegment(orderedStops(ride), pickupLocationId, dropLocationId)
+    : null;
+
   const amountPerSeat = ride.pricePerSeat;
   const passengerCount = passengers.length;
   const totalAmount = amountPerSeat * passengerCount;
@@ -113,6 +190,10 @@ export async function createFromHold(userId, { rideId, holdId, passengers }) {
     bookingNumber: generateBookingNumber(),
     userId,
     rideId: ride._id,
+    pickupLocationId: segment?.pickup.locationId || null,
+    dropLocationId: segment?.drop.locationId || null,
+    pickupName: segment?.pickup.name || null,
+    dropName: segment?.drop.name || null,
     passengers,
     selectedSeats: heldSeatNumbers,
     passengerCount,
@@ -131,23 +212,58 @@ export async function createFromHold(userId, { rideId, holdId, passengers }) {
     userId: userId.toString(),
   });
 
-  return booking;
+  notificationService.notifyBookingCreated(booking).catch((err) => {
+    logger.warn('notification.failed', { type: 'BOOKING_CREATED', message: err.message });
+  });
+
+  return Booking.findById(booking._id).populate({
+    path: 'rideId',
+    populate: [
+      { path: 'routeId' },
+      { path: 'vehicleId', select: 'vehicleType make model features registrationNumber capacity' },
+      { path: 'driverId', select: 'name phone rating licenseNumber upiId qrCode paymentInstructions' },
+    ],
+  });
 }
 
-export async function listMine(userId) {
-  const bookings = await Booking.find({ userId })
-    .populate({
-      path: 'rideId',
-      populate: { path: 'routeId' },
-    })
-    .sort({ createdAt: -1 });
-  return { bookings };
+export async function listMine(userId, query = {}) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(query.limit) || 20));
+  const filter = { userId };
+  const [total, bookings, pendingPayments, upcoming] = await Promise.all([
+    Booking.countDocuments(filter),
+    Booking.find(filter)
+      .populate({
+        path: 'rideId',
+        populate: { path: 'routeId' },
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Booking.countDocuments({ userId, bookingStatus: BOOKING_STATUS.PENDING }),
+    Booking.countDocuments({
+      userId,
+      bookingStatus: { $in: [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED] },
+    }),
+  ]);
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    pages: Math.max(1, Math.ceil(total / limit)),
+    counts: { total, pendingPayments, upcoming },
+  };
 }
 
 export async function getById(bookingId, requester) {
   const booking = await Booking.findById(bookingId).populate({
     path: 'rideId',
-    populate: [{ path: 'routeId' }, { path: 'vehicleId', select: 'vehicleType make model' }],
+    populate: [
+      { path: 'routeId' },
+      { path: 'vehicleId', select: 'vehicleType make model features registrationNumber capacity' },
+      { path: 'driverId', select: 'name phone rating licenseNumber upiId qrCode paymentInstructions' },
+    ],
   });
 
   if (!booking) {
@@ -205,7 +321,8 @@ export async function cancel(bookingId, requester, { reason } = {}) {
     ride &&
     (ride.status === RIDE_STATUS.STARTED ||
       ride.status === RIDE_STATUS.COMPLETED ||
-      ride.status === RIDE_STATUS.BOARDING)
+      ride.status === RIDE_STATUS.BOARDING ||
+      ride.status === RIDE_STATUS.ACTIVE)
   ) {
     throw new AppError('Booking cannot be cancelled after boarding has started', {
       code: ErrorCodes.BOOKING_NOT_CANCELLABLE,
@@ -213,29 +330,28 @@ export async function cancel(bookingId, requester, { reason } = {}) {
     });
   }
 
-  const wasPaid = booking.paymentStatus === BOOKING_PAYMENT_STATUS.PAID;
+  if (isAdmin) requireReason(reason);
+
+  const percent = obligationPercent({
+    departureTime: ride?.departureTime,
+    rideStatus: ride?.status,
+    rideCancelled: false,
+  });
+  applyObligation(booking, percent);
 
   booking.bookingStatus = BOOKING_STATUS.CANCELLED;
   booking.cancelledAt = new Date();
   booking.cancellationReason = reason || null;
 
-  if (wasPaid) {
-    booking.paymentStatus = BOOKING_PAYMENT_STATUS.REFUNDED;
-    await releaseBookedSeats(booking._id);
-    await Payment.updateMany(
-      { bookingId: booking._id, status: PAYMENT_STATUS.SUCCESS },
-      { $set: { status: PAYMENT_STATUS.REFUNDED, refundedAt: new Date(), refundAmount: booking.totalAmount } }
-    );
-  } else {
-    await releaseHold(booking.holdId);
-    await Payment.updateMany(
-      {
-        bookingId: booking._id,
-        status: { $in: [PAYMENT_STATUS.CREATED, PAYMENT_STATUS.PENDING] },
-      },
-      { $set: { status: PAYMENT_STATUS.FAILED } }
-    );
-  }
+  await releaseHold(booking.holdId);
+  await releaseBookedSeats(booking._id);
+  await Payment.updateMany(
+    {
+      bookingId: booking._id,
+      status: { $in: [PAYMENT_STATUS.CREATED, PAYMENT_STATUS.PENDING] },
+    },
+    { $set: { status: PAYMENT_STATUS.FAILED } }
+  );
 
   await booking.save();
 
@@ -246,7 +362,13 @@ export async function cancel(bookingId, requester, { reason } = {}) {
       action: 'BOOKING_CANCELLED',
       entityType: 'Booking',
       entityId: booking._id,
-      newValue: { reason, bookingStatus: BOOKING_STATUS.CANCELLED },
+      oldValue: { bookingStatus: BOOKING_STATUS.PENDING },
+      newValue: {
+        bookingStatus: BOOKING_STATUS.CANCELLED,
+        refundAmount: booking.refundAmount,
+        refundStatus: booking.refundStatus,
+      },
+      reason: requireReason(reason),
     });
   }
 
@@ -255,8 +377,8 @@ export async function cancel(bookingId, requester, { reason } = {}) {
     by: requester._id.toString(),
   });
 
-  notificationService.sendBookingCancellation(booking).catch((err) => {
-    logger.warn('notification.failed', { type: 'BOOKING_CANCELLATION', message: err.message });
+  notificationService.notifyBookingCancelled(booking).catch((err) => {
+    logger.warn('notification.failed', { type: 'BOOKING_CANCELLED', message: err.message });
   });
 
   return booking;
@@ -283,15 +405,108 @@ export async function expirePending() {
   return { expired: count };
 }
 
+export async function cancelBookingsForRide(ride, { reason, actor }) {
+  const bookings = await Booking.find({
+    rideId: ride._id,
+    bookingStatus: { $in: [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED] },
+  });
+
+  for (const booking of bookings) {
+    const paid = booking.bookingStatus === BOOKING_STATUS.CONFIRMED;
+    booking.bookingStatus = BOOKING_STATUS.CANCELLED;
+    booking.cancelledAt = new Date();
+    booking.cancellationReason = reason || 'Ride cancelled';
+    if (paid) {
+      applyObligation(booking, obligationPercent({ rideCancelled: true }));
+      await releaseBookedSeats(booking._id);
+    } else {
+      booking.refundAmount = 0;
+      booking.refundStatus = REFUND_STATUS.NOT_APPLICABLE;
+    }
+    await releaseHold(booking.holdId);
+    await booking.save();
+    notificationService.notifyRideCancelled(booking).catch((err) => {
+      logger.warn('notification.failed', { type: 'RIDE_CANCELLED', message: err.message });
+    });
+  }
+
+  if (actor) {
+    await writeAudit({
+      actorId: actor._id,
+      actorRole: actor.role,
+      action: 'RIDE_CANCELLED',
+      entityType: 'Ride',
+      entityId: ride._id,
+      newValue: { status: RIDE_STATUS.CANCELLED, bookings: bookings.length },
+      reason: reason || null,
+    });
+  }
+
+  return bookings;
+}
+
+export async function updateRefund(actor, bookingId, { refundStatus, refundReference, reason }) {
+  const why = requireReason(reason);
+  if (!Object.values(REFUND_STATUS).includes(refundStatus)) {
+    throw new AppError('Invalid refund status', {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    throw new AppError('Booking not found', { code: ErrorCodes.BOOKING_NOT_FOUND, statusCode: 404 });
+  }
+  const oldValue = {
+    refundStatus: booking.refundStatus,
+    refundAmount: booking.refundAmount,
+    refundReference: booking.refundReference,
+  };
+  booking.refundStatus = refundStatus;
+  if (refundReference !== undefined) booking.refundReference = refundReference;
+  if (refundStatus === REFUND_STATUS.COMPLETED || refundStatus === REFUND_STATUS.WAIVED || refundStatus === REFUND_STATUS.PARTIAL) {
+    booking.refundProcessedAt = new Date();
+    booking.refundProcessedBy = actor._id;
+  }
+  await booking.save();
+  await writeAudit({
+    actorId: actor._id,
+    actorRole: actor.role,
+    action: 'REFUND_STATUS_CHANGED',
+    entityType: 'Booking',
+    entityId: booking._id,
+    oldValue,
+    newValue: {
+      refundStatus: booking.refundStatus,
+      refundAmount: booking.refundAmount,
+      refundReference: booking.refundReference,
+    },
+    reason: why,
+  });
+  notificationService.notifyRefundUpdated(booking).catch((err) => {
+    logger.warn('notification.failed', { type: 'REFUND_STATUS_UPDATED', message: err.message });
+  });
+  return booking;
+}
+
 export async function listAllAdmin(filters = {}) {
   const query = {};
   if (filters.status) query.bookingStatus = filters.status;
   if (filters.userId) query.userId = filters.userId;
   if (filters.rideId) query.rideId = filters.rideId;
+  if (filters.refundStatus) query.refundStatus = filters.refundStatus;
+  if (filters.proofStatus) query.proofStatus = filters.proofStatus;
 
-  const bookings = await Booking.find(query)
-    .populate('userId', 'name email phone')
-    .populate({ path: 'rideId', populate: { path: 'routeId' } })
-    .sort({ createdAt: -1 });
-  return { bookings };
+  const page = Math.max(1, Number(filters.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(filters.limit) || 10));
+  const [total, bookings] = await Promise.all([
+    Booking.countDocuments(query),
+    Booking.find(query)
+      .populate('userId', 'name email phone payoutUpi')
+      .populate({ path: 'rideId', populate: [{ path: 'routeId' }, { path: 'driverId', select: 'name' }] })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+  ]);
+  return { bookings, total, page, limit, pages: Math.max(1, Math.ceil(total / limit)) };
 }
