@@ -1,9 +1,10 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import Logo from '../brand/Logo';
+import DownloadAppButton from '../pwa/DownloadAppButton';
 import { cn } from '../../utils/cn';
 
 const navLinkClass = ({ isActive }) =>
@@ -15,62 +16,67 @@ const navLinkClass = ({ isActive }) =>
 export default function PublicLayout() {
   const { user, logout, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  const showDownload = pathname === '/';
 
   return (
     <div className="min-h-dvh bg-surface text-ink">
       <header className="print-hide sticky top-0 z-40 border-b border-line/80 bg-ivory/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
           <Link to="/" className="shrink-0" onClick={() => setOpen(false)}>
             <Logo />
           </Link>
-          <nav className="hidden items-center gap-6 md:flex">
-            <NavLink to="/search" className={navLinkClass}>
-              Find rides
-            </NavLink>
-            {isAuthenticated ? (
-              <>
-                <NavLink to="/my-bookings" className={navLinkClass}>
-                  My bookings
-                </NavLink>
-                <NavLink to="/notifications" className={navLinkClass}>
-                  Alerts
-                </NavLink>
-                <NavLink to="/profile" className={navLinkClass}>
-                  Profile
-                </NavLink>
-                {user?.role === 'DRIVER' ? (
-                  <NavLink to="/driver" className={navLinkClass}>
-                    Driver
+          <div className="flex items-center gap-2 md:gap-6">
+            <nav className="hidden items-center gap-6 md:flex">
+              <NavLink to="/search" className={navLinkClass}>
+                Find rides
+              </NavLink>
+              {isAuthenticated ? (
+                <>
+                  <NavLink to="/my-bookings" className={navLinkClass}>
+                    My bookings
                   </NavLink>
-                ) : null}
-                {user?.role === 'ADMIN' ? (
-                  <NavLink to="/admin" className={navLinkClass}>
-                    Admin
+                  <NavLink to="/notifications" className={navLinkClass}>
+                    Alerts
                   </NavLink>
-                ) : null}
-                <Button variant="outline" size="sm" onClick={() => logout()}>
-                  Log out
-                </Button>
-              </>
-            ) : (
-              <>
-                <NavLink to="/login" className={navLinkClass}>
-                  Log in
-                </NavLink>
-                <Link to="/register">
-                  <Button size="sm">Register</Button>
-                </Link>
-              </>
-            )}
-          </nav>
-          <button
-            type="button"
-            className="rounded-xl p-2 text-navy md:hidden"
-            onClick={() => setOpen((v) => !v)}
-            aria-label="Toggle menu"
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+                  <NavLink to="/profile" className={navLinkClass}>
+                    Profile
+                  </NavLink>
+                  {user?.role === 'DRIVER' ? (
+                    <NavLink to="/driver" className={navLinkClass}>
+                      Driver
+                    </NavLink>
+                  ) : null}
+                  {user?.role === 'ADMIN' ? (
+                    <NavLink to="/admin" className={navLinkClass}>
+                      Admin
+                    </NavLink>
+                  ) : null}
+                  <Button variant="outline" size="sm" onClick={() => logout()}>
+                    Log out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/login" className={navLinkClass}>
+                    Log in
+                  </NavLink>
+                  <Link to="/register">
+                    <Button size="sm">Register</Button>
+                  </Link>
+                </>
+              )}
+            </nav>
+            <button
+              type="button"
+              className="shrink-0 rounded-xl p-2 text-navy md:hidden"
+              onClick={() => setOpen((v) => !v)}
+              aria-label="Toggle menu"
+            >
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            {showDownload ? <DownloadAppButton /> : null}
+          </div>
         </div>
         {open ? (
           <div className="border-t border-line bg-white px-4 py-4 md:hidden">

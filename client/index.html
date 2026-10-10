@@ -32,13 +32,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
-      const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-      if ('serviceWorker' in navigator && !local) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
-      }
-    </script>
   </body>
 </html>
