@@ -26,12 +26,18 @@ function parseClientUrls(raw) {
 }
 
 const clientUrls = parseClientUrls(process.env.CLIENT_URL);
+const env = process.env.NODE_ENV || 'development';
+const requestedMemoryMongo = process.env.USE_MEMORY_MONGO === 'true';
+
+if (requestedMemoryMongo && env === 'production') {
+  console.warn('[config] USE_MEMORY_MONGO is ignored in production. Connecting with MONGODB_URI.');
+}
 
 export const config = {
-  env: process.env.NODE_ENV || 'development',
+  env,
   port: Number(process.env.PORT) || 5055,
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/local_cab_booking',
-  useMemoryMongo: process.env.USE_MEMORY_MONGO === 'true',
+  useMemoryMongo: requestedMemoryMongo && env !== 'production',
   clientUrl: clientUrls[0],
   clientUrls,
   jwt: {
