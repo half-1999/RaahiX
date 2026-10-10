@@ -1,4 +1,5 @@
 /** Cab presentation helpers. Amenities come only from the vehicle record. */
+import { API_URL } from '../services/api';
 
 export function rideAmenities(ride) {
   return ride?.vehicle?.features || ride?.features || [];
@@ -13,7 +14,7 @@ export function cabDisplayName(ride) {
 
 export function rideHeroImage(ride) {
   const vehicleId = ride?.vehicle?.id || ride?.vehicle?._id;
-  if (vehicleId && ride?.vehicle?.images?.length) return `/api/vehicles/${vehicleId}/photo`;
+  if (vehicleId && ride?.vehicle?.images?.length) return `${API_URL}/vehicles/${vehicleId}/photo`;
   return '/raahix-mark.jpg';
 }
 

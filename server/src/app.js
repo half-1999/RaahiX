@@ -52,6 +52,16 @@ if (config.env !== 'test') {
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 }
 
+app.get('/', (req, res) => {
+  success(res, {
+    message: 'RaahiX API',
+    data: {
+      health: '/api/health',
+      app: 'https://raahi-x.vercel.app',
+    },
+  });
+});
+
 app.get('/api/health', (req, res) => {
   success(res, { message: 'OK', data: { status: 'ok', env: config.env } });
 });

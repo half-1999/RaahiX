@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { driverService } from '../../services/driverService';
-import { getErrorMessage } from '../../services/api';
+import { API_URL, getErrorMessage } from '../../services/api';
 import PageHeader from '../../components/common/PageHeader';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
@@ -72,7 +72,7 @@ export default function DriverVehiclesPage() {
             <div className="flex gap-3">
               {vehicle.images?.length ? (
                 <img
-                  src={`/api/vehicles/${vehicle._id}/photo`}
+                  src={`${API_URL}/vehicles/${vehicle._id}/photo`}
                   alt={`${vehicle.make} ${vehicle.model}`}
                   className="h-20 w-28 rounded-lg object-cover"
                 />

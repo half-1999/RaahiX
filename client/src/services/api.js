@@ -1,6 +1,15 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const PRODUCTION_API_URL = 'https://raahix.onrender.com/api';
+
+function resolveApiUrl() {
+  const configured = import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV) return configured || '/api';
+  if (configured && configured !== '/api') return configured.replace(/\/$/, '');
+  return PRODUCTION_API_URL;
+}
+
+export const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,

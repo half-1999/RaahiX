@@ -25,7 +25,8 @@ function parseClientUrls(raw) {
   return [...new Set(listed)];
 }
 
-const clientUrls = parseClientUrls(process.env.CLIENT_URL);
+const hostedClients = ['https://raahi-x.vercel.app'];
+const clientUrls = [...new Set([...parseClientUrls(process.env.CLIENT_URL), ...hostedClients])];
 const env = process.env.NODE_ENV || 'development';
 const requestedMemoryMongo = process.env.USE_MEMORY_MONGO === 'true';
 
