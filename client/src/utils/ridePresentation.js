@@ -1,4 +1,4 @@
-/** Cab presentation helpers. Amenities come only from the vehicle record. */
+/** Car presentation helpers. Amenities come only from the vehicle record. */
 import { API_URL } from '../services/api';
 import { stockCabImage } from './cabImages';
 

@@ -40,7 +40,7 @@ export default function RideSummary({ ride, compact = false }) {
           </p>
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate">
             <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3.5 w-3.5 text-brand" />
+              <Clock3 className="h-3.5 w-3.5 text-brand-dark" />
               {formatDate(ride.date || ride.departureTime)} · {formatTime(ride.departureTime)}
               {ride.arrivalTime ? ` – ${formatTime(ride.arrivalTime)}` : ''}
             </span>
@@ -54,7 +54,7 @@ export default function RideSummary({ ride, compact = false }) {
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-xl bg-mist/70 p-3">
               <dt className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate">
-                <MapPin className="h-3 w-3 text-brand" /> Pickup
+                <MapPin className="h-3 w-3 text-brand-dark" /> Pickup
               </dt>
               <dd className="mt-1 font-semibold text-navy">{ride.pickupPoint || '—'}</dd>
             </div>
@@ -70,8 +70,13 @@ export default function RideSummary({ ride, compact = false }) {
             </div>
             <div className="rounded-xl bg-mist/70 p-3">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Price / seat</dt>
-              <dd className="mt-1 font-display text-lg font-bold text-brand">
+              <dd className="mt-1 font-display text-lg font-bold text-brand-dark">
                 {formatCurrency(ride.pricePerSeat ?? ride.price)}
+                {ride.frontSeatPrice != null ? (
+                  <span className="mt-1 block text-xs font-semibold text-slate">
+                    Front seat {formatCurrency(ride.frontSeatPrice)}
+                  </span>
+                ) : null}
               </dd>
             </div>
             {driver?.name ? (

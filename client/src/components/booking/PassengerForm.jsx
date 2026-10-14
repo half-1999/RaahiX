@@ -51,7 +51,7 @@ export default function PassengerForm({
     >
       <div className="rounded-2xl border border-line bg-mist/50 p-4">
         <p className="inline-flex items-center gap-2 text-sm font-semibold text-navy">
-          <UserRound className="h-4 w-4 text-brand" />
+          <UserRound className="h-4 w-4 text-brand-dark" />
           Passenger details
         </p>
         <p className="mt-1 text-xs text-slate">
@@ -75,7 +75,7 @@ export default function PassengerForm({
             className="rounded-2xl border border-line bg-white p-4 shadow-[var(--shadow-soft)] md:p-5"
           >
             <legend className="px-1">
-              <span className="text-sm font-semibold text-brand">Seat {seatNumber}</span>
+              <span className="text-sm font-semibold text-brand-dark">Seat {seatNumber}</span>
               <span className="ml-2 text-xs font-medium text-slate">{meta.label}</span>
             </legend>
             <div className="grid gap-3 sm:grid-cols-2">

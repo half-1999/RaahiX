@@ -40,9 +40,10 @@ export const searchRidesSchema = z.object({
 
 export const holdSeatsSchema = z.object({
   rideId: objectId,
-  seatNumbers: z.array(z.string().min(1)).min(1),
+  seatNumbers: z.array(z.string().min(1)).min(1).max(6),
   pickupLocationId: objectId.optional(),
   dropLocationId: objectId.optional(),
+  passengerCount: z.number().int().min(1).max(6).optional(),
 });
 
 export const createBookingSchema = z.object({
@@ -105,17 +106,23 @@ export const driverRideSchema = z.object({
   departureTime: z.string().min(1),
   arrivalTime: z.string().min(1),
   pricePerSeat: z.number().min(1),
+  frontSeatPrice: z.number().min(0).optional(),
   capacity: z.number().int().min(1).max(6).optional(),
   pickupPoint: z.string().min(1).optional(),
   dropPoint: z.string().min(1).optional(),
+  pickupPoints: z.array(z.string().min(1)).max(2).optional(),
+  dropPoints: z.array(z.string().min(1)).max(2).optional(),
 });
 
 export const driverUpdateRideSchema = z.object({
   departureTime: z.string().min(1).optional(),
   arrivalTime: z.string().min(1).optional(),
   pricePerSeat: z.number().min(1).optional(),
+  frontSeatPrice: z.number().min(0).nullable().optional(),
   pickupPoint: z.string().min(1).optional(),
   dropPoint: z.string().min(1).optional(),
+  pickupPoints: z.array(z.string().min(1)).max(2).optional(),
+  dropPoints: z.array(z.string().min(1)).max(2).optional(),
 });
 
 export const driverCapacitySchema = z.object({
@@ -200,6 +207,9 @@ export const createRideSchema = z.object({
   pickupPoint: z.string().min(1),
   dropPoint: z.string().min(1),
   pricePerSeat: z.number().min(1),
+  frontSeatPrice: z.number().min(0).optional(),
+  pickupPoints: z.array(z.string().min(1)).max(2).optional(),
+  dropPoints: z.array(z.string().min(1)).max(2).optional(),
 });
 
 export const updateRideSchema = z.object({

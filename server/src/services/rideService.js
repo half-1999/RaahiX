@@ -108,8 +108,11 @@ function toRideSummary(ride) {
     arrivalTime: ride.arrivalTime,
     pickupPoint: ride.pickupPoint,
     dropPoint: ride.dropPoint,
+    pickupPoints: (ride.pickupPoints || []).slice(0, 2),
+    dropPoints: (ride.dropPoints || []).slice(0, 2),
     rideStops: ride.rideStops || [],
     pricePerSeat: ride.pricePerSeat,
+    frontSeatPrice: ride.frontSeatPrice ?? null,
     availableSeats: ride.availableSeats,
     totalSeats: ride.totalSeats,
     status: ride.status,
@@ -131,7 +134,6 @@ function toRideSummary(ride) {
             model: vehicle.model,
             capacity: vehicle.capacity,
             features: vehicle.features || [],
-            registrationNumber: vehicle.registrationNumber,
             images: (vehicle.images || []).map((image) => ({
               id: image._id?.toString?.() || image.id,
             })),
@@ -140,9 +142,6 @@ function toRideSummary(ride) {
     driver:
       ride.driverId && typeof ride.driverId === 'object'
         ? {
-            id: ride.driverId._id?.toString?.(),
-            name: ride.driverId.name,
-            phone: ride.driverId.phone,
             rating: ride.driverId.rating,
           }
         : undefined,
@@ -160,6 +159,9 @@ export async function createRide(payload, actor) {
     pickupPoint,
     dropPoint,
     pricePerSeat,
+    frontSeatPrice,
+    pickupPoints,
+    dropPoints,
   } = payload;
 
   const { driver, vehicle, route } = await validateAssignment(driverId, vehicleId, routeId);
@@ -177,6 +179,9 @@ export async function createRide(payload, actor) {
     rideStops: stopsFromRoute(route),
     legs: legsFromStops(stopsFromRoute(route), seats.length),
     pricePerSeat,
+    frontSeatPrice: frontSeatPrice ?? null,
+    pickupPoints: (pickupPoints || [pickupPoint]).filter(Boolean).slice(0, 2),
+    dropPoints: (dropPoints || [dropPoint]).filter(Boolean).slice(0, 2),
     totalSeats: vehicle.capacity,
     availableSeats: seats.length,
     seats,
@@ -450,22 +455,32 @@ export async function getRide(rideId) {
     arrivalTime: ride.arrivalTime,
     pickupPoint: ride.pickupPoint,
     dropPoint: ride.dropPoint,
+    pickupPoints: (ride.pickupPoints || []).slice(0, 2),
+    dropPoints: (ride.dropPoints || []).slice(0, 2),
     rideStops: ride.rideStops || [],
     pricePerSeat: ride.pricePerSeat,
+    frontSeatPrice: ride.frontSeatPrice ?? null,
     availableSeats: ride.availableSeats,
     totalSeats: ride.totalSeats,
     status: ride.status,
     route: ride.routeId,
     driver: ride.driverId
       ? {
-          id: ride.driverId._id.toString(),
-          name: ride.driverId.name,
-          phone: ride.driverId.phone,
           rating: ride.driverId.rating,
           totalTrips: ride.driverId.totalTrips,
         }
       : null,
-    vehicle: ride.vehicleId,
+    vehicle: ride.vehicleId
+      ? {
+          id: ride.vehicleId._id?.toString?.(),
+          vehicleType: ride.vehicleId.vehicleType,
+          make: ride.vehicleId.make,
+          model: ride.vehicleId.model,
+          capacity: ride.vehicleId.capacity,
+          features: ride.vehicleId.features || [],
+          images: ride.vehicleId.images || [],
+        }
+      : null,
   };
 }
 

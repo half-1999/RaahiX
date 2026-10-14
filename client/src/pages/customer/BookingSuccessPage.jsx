@@ -91,14 +91,14 @@ export default function BookingSuccessPage() {
         animate={{ opacity: 1, y: 0 }}
         className="overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-lift)]"
       >
-        <div className="bg-brand-gradient px-6 py-8 text-center text-white">
+        <div className="bg-brand px-6 py-8 text-center text-ink">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <h1 className="mt-4 font-display text-3xl font-bold text-balance">
             You&apos;re all set for {destLabel.split(',')[0]}
           </h1>
-          <p className="mt-2 text-sm text-white/80">Booking ID</p>
+          <p className="mt-2 text-sm text-ink/70">Booking ID</p>
           <p className="mt-1 font-mono text-lg font-semibold tracking-wide">
             {booking.bookingNumber || entityId(booking)}
           </p>
@@ -117,7 +117,7 @@ export default function BookingSuccessPage() {
               </div>
               <div className="px-2">
                 <div className="h-px w-16 bg-brand sm:w-24" />
-                <p className="mt-1 text-[11px] font-semibold text-brand">
+                <p className="mt-1 text-[11px] font-semibold text-brand-dark">
                   {duration ? formatDuration(duration) : 'Direct'}
                 </p>
               </div>
@@ -137,7 +137,7 @@ export default function BookingSuccessPage() {
 
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-xl border border-line p-3">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Cab</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Car</dt>
               <dd className="mt-1 font-semibold text-navy">
                 {cabDisplayName(ride)}
                 {ride?.vehicle?.registrationNumber ? ` · ${ride.vehicle.registrationNumber}` : ''}
@@ -163,7 +163,7 @@ export default function BookingSuccessPage() {
             </div>
             <div className="rounded-xl border border-line p-3">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Paid</dt>
-              <dd className="mt-1 font-display text-xl font-bold text-brand">
+              <dd className="mt-1 font-display text-xl font-bold text-brand-dark">
                 {formatCurrency(booking.totalAmount)}
               </dd>
             </div>

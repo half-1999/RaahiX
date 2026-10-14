@@ -99,11 +99,11 @@ export default function SearchPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-coral">Search</p>
-          <h1 className="mt-1 font-display text-3xl font-bold text-navy">Available cabs</h1>
+          <h1 className="mt-1 font-display text-3xl font-bold text-navy">Available cars</h1>
           <p className="mt-1 text-sm text-slate">
             {enabled
               ? `${query.originCity} → ${query.destinationCity} · ${query.date} · ${query.passengers} passenger(s)`
-              : 'Enter a route and date to see scheduled cabs'}
+              : 'Enter a route and date to see scheduled cars'}
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export default function SearchPage() {
               <SlidersHorizontal className="h-4 w-4" />
               Filters &amp; sort
               {activeFilterCount ? (
-                <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] text-white">
+                <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] text-ink">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -231,9 +231,9 @@ export default function SearchPage() {
 
       {rides.length ? (
         <div className="space-y-4">
-          <p className="text-sm font-medium text-slate">{rides.length} cab(s) match your search</p>
+          <p className="text-sm font-medium text-slate">{rides.length} car(s) match your search</p>
           {rides.map((ride) => (
-            <RideCard key={ride.id || ride._id} ride={ride} />
+            <RideCard key={ride.id || ride._id} ride={ride} passengers={query.passengers} />
           ))}
         </div>
       ) : null}

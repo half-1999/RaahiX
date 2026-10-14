@@ -3,13 +3,14 @@ import { User } from '../models/User.js';
 import { Ride } from '../models/Ride.js';
 import { Booking } from '../models/Booking.js';
 import { Vehicle } from '../models/Vehicle.js';
-import { BOOKING_STATUS } from '../constants/enums.js';
+import { BOOKING_STATUS, RIDE_STATUS } from '../constants/enums.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 
 async function priorRide(userId, vehicleId) {
   const rides = await Ride.find({
     vehicleId,
+    status: { $nin: [RIDE_STATUS.CANCELLED, RIDE_STATUS.DRAFT] },
     departureTime: { $lt: new Date() },
   }).select('_id');
   if (!rides.length) return null;
@@ -60,16 +61,25 @@ export async function createReview(userId, vehicleId, { rating, comment }) {
   }
   const booking = await priorRide(userId, vehicleId);
   if (!booking) {
-    throw new AppError('You can review a cab only after you have ridden it', {
+    throw new AppError('You can review a car only after you have ridden in it', {
       code: ErrorCodes.AUTH_FORBIDDEN,
       statusCode: 403,
     });
   }
-  const review = await Review.findOneAndUpdate(
-    { vehicleId, userId },
-    { rating: score, comment: text, bookingId: booking._id },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  const existing = await Review.findOne({ vehicleId, userId });
+  if (existing) {
+    throw new AppError('You have already reviewed this ride', {
+      code: ErrorCodes.CONFLICT,
+      statusCode: 409,
+    });
+  }
+  const review = await Review.create({
+    vehicleId,
+    userId,
+    rating: score,
+    comment: text,
+    bookingId: booking._id,
+  });
   return review;
 }
 

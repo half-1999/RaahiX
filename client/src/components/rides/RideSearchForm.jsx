@@ -15,6 +15,9 @@ export default function RideSearchForm({
   compact = false,
   floating = false,
   onSubmit,
+  submitLabel,
+  actionBelow = false,
+  bare = false,
 }) {
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -81,21 +84,21 @@ export default function RideSearchForm({
     <form
       onSubmit={submit}
       className={cn(
-        'rounded-2xl border border-line bg-white/95 p-4 shadow-[var(--shadow-soft)] backdrop-blur md:p-5',
-        floating && '-mt-10 border-white/70 shadow-[var(--shadow-lift)] md:-mt-14',
+        !bare && 'rounded-2xl border border-line bg-white/95 p-4 shadow-[var(--shadow-soft)] md:p-5',
+        floating && !bare && '-mt-10 border-white/70 shadow-[var(--shadow-lift)] md:-mt-14',
         className
       )}
     >
       <div
         className={cn(
           'grid gap-3',
-          compact
-            ? 'md:grid-cols-2'
+          bare || compact
+            ? 'sm:grid-cols-2'
             : 'md:grid-cols-[1.1fr_auto_1.1fr_1fr_0.7fr_auto]'
         )}
       >
         <div className="relative">
-          <MapPin className="pointer-events-none absolute left-3 top-[2.55rem] h-4 w-4 text-brand" />
+          <MapPin className="pointer-events-none absolute left-3 top-[2.55rem] h-4 w-4 text-brand-dark" />
           <Select
             label="From"
             name="originCity"
@@ -107,12 +110,12 @@ export default function RideSearchForm({
             className="pl-9"
           />
         </div>
-        {!compact ? (
+        {!compact && !bare ? (
           <div className="flex items-end justify-center pb-1">
             <button
               type="button"
               onClick={swap}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-mist text-brand transition hover:border-brand hover:bg-brand hover:text-white"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-mist text-brand-dark transition hover:border-brand hover:bg-brand hover:text-ink"
               aria-label="Swap cities"
             >
               <ArrowLeftRight className="h-4 w-4" />
@@ -120,7 +123,7 @@ export default function RideSearchForm({
           </div>
         ) : null}
         <div className="relative">
-          <MapPin className="pointer-events-none absolute left-3 top-[2.55rem] h-4 w-4 text-coral" />
+          <MapPin className="pointer-events-none absolute left-3 top-[2.55rem] h-4 w-4 text-brand-dark" />
           <Select
             label="To"
             name="destinationCity"
@@ -132,6 +135,17 @@ export default function RideSearchForm({
             className="pl-9"
           />
         </div>
+        {bare ? (
+          <div className="flex justify-end sm:col-span-2">
+            <button
+              type="button"
+              onClick={swap}
+              className="text-sm font-semibold text-brand-dark underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+            >
+              Swap cities
+            </button>
+          </div>
+        ) : null}
         <div className="relative">
           <CalendarDays className="pointer-events-none absolute left-3 top-[2.55rem] h-4 w-4 text-slate" />
           <Input
@@ -159,18 +173,28 @@ export default function RideSearchForm({
             inputClassName="pl-9"
           />
         </div>
-        {compact ? null : (
+        {compact || actionBelow ? null : (
           <div className="flex items-end">
             <Button type="submit" className="w-full md:min-w-[8.5rem]">
-              Find rides
+              {submitLabel || 'Find rides'}
             </Button>
           </div>
         )}
       </div>
-      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
-      {compact ? (
+      {citiesQuery.isLoading ? <p className="mt-3 text-sm text-slate">Loading cities…</p> : null}
+      {citiesQuery.isError ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          Cities could not be loaded. Refresh and try again.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {compact || actionBelow ? (
         <Button type="submit" className="mt-3 w-full">
-          Search cabs
+          {submitLabel || (compact ? 'Search cars' : 'Find rides')}
         </Button>
       ) : null}
     </form>

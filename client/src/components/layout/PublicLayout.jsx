@@ -7,48 +7,63 @@ import Logo from '../brand/Logo';
 import DownloadAppButton from '../pwa/DownloadAppButton';
 import { cn } from '../../utils/cn';
 
-const navLinkClass = ({ isActive }) =>
-  cn(
-    'text-sm font-semibold transition hover:text-brand',
-    isActive ? 'text-brand' : 'text-slate'
-  );
+const links = [
+  { href: '/#how-it-works', label: 'How it works' },
+  { href: '/search', label: 'Find rides' },
+  { href: '/#for-drivers', label: 'For drivers' },
+];
+
+const linkClass =
+  'text-sm font-semibold text-slate transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-dark focus-visible:ring-offset-2';
+
+function navClass({ isActive }) {
+  return cn(linkClass, isActive && 'text-ink');
+}
 
 export default function PublicLayout() {
   const { user, logout, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const showDownload = pathname === '/';
+  const close = () => setOpen(false);
 
   return (
     <div className="min-h-dvh bg-surface text-ink">
-      <header className="print-hide sticky top-0 z-40 border-b border-line/80 bg-ivory/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link to="/" className="shrink-0" onClick={() => setOpen(false)}>
-            <Logo />
+      <a href="#content" className="skip-link">
+        Skip to content
+      </a>
+      <header className="print-hide sticky top-0 z-40 border-b border-line bg-white">
+        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-2">
+          <Link to="/" aria-label="RaahiX" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-dark" onClick={close}>
+            <Logo size="sm" />
           </Link>
-          <div className="flex items-center gap-2 md:gap-6">
-            <nav className="hidden items-center gap-6 md:flex">
-              <NavLink to="/search" className={navLinkClass}>
-                Find rides
-              </NavLink>
+          <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
+            {links.map((item) =>
+              item.href.startsWith('/#') ? (
+                <a key={item.href} href={item.href} className={linkClass}>
+                  {item.label}
+                </a>
+              ) : (
+                <NavLink key={item.href} to={item.href} className={navClass}>
+                  {item.label}
+                </NavLink>
+              )
+            )}
+          </nav>
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 lg:flex">
               {isAuthenticated ? (
                 <>
-                  <NavLink to="/my-bookings" className={navLinkClass}>
+                  <NavLink to="/my-bookings" className={navClass}>
                     My bookings
                   </NavLink>
-                  <NavLink to="/notifications" className={navLinkClass}>
-                    Alerts
-                  </NavLink>
-                  <NavLink to="/profile" className={navLinkClass}>
-                    Profile
-                  </NavLink>
                   {user?.role === 'DRIVER' ? (
-                    <NavLink to="/driver" className={navLinkClass}>
+                    <NavLink to="/driver" className={navClass}>
                       Driver
                     </NavLink>
                   ) : null}
                   {user?.role === 'ADMIN' ? (
-                    <NavLink to="/admin" className={navLinkClass}>
+                    <NavLink to="/admin" className={navClass}>
                       Admin
                     </NavLink>
                   ) : null}
@@ -58,53 +73,84 @@ export default function PublicLayout() {
                 </>
               ) : (
                 <>
-                  <NavLink to="/login" className={navLinkClass}>
+                  <NavLink to="/login" className={navClass}>
                     Log in
                   </NavLink>
-                  <Link to="/register">
-                    <Button size="sm">Register</Button>
+                  <Link to="/register/driver">
+                    <Button variant="outline" size="sm">
+                      Offer a ride
+                    </Button>
                   </Link>
                 </>
               )}
-            </nav>
+              <Link to="/search">
+                <Button size="sm">Find a ride</Button>
+              </Link>
+            </div>
+            {showDownload ? <DownloadAppButton /> : null}
             <button
               type="button"
-              className="shrink-0 rounded-xl p-2 text-navy md:hidden"
-              onClick={() => setOpen((v) => !v)}
-              aria-label="Toggle menu"
+              className="shrink-0 rounded-xl p-2 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-dark lg:hidden"
+              onClick={() => setOpen((value) => !value)}
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+              aria-controls="mobile-nav"
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            {showDownload ? <DownloadAppButton /> : null}
           </div>
         </div>
         {open ? (
-          <div className="border-t border-line bg-white px-4 py-4 md:hidden">
-            <div className="flex flex-col gap-3 text-sm font-semibold text-navy">
-              <Link to="/search" onClick={() => setOpen(false)}>
-                Find rides
+          <div id="mobile-nav" className="border-t border-line bg-white px-4 py-4 lg:hidden">
+            <div className="flex flex-col gap-3">
+              <Link to="/search" onClick={close}>
+                <Button className="w-full">Find a ride</Button>
               </Link>
+              {links.map((item) =>
+                item.href.startsWith('/#') ? (
+                  <a key={item.href} href={item.href} onClick={close} className="py-1 text-sm font-semibold text-ink">
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link key={item.href} to={item.href} onClick={close} className="py-1 text-sm font-semibold text-ink">
+                    {item.label}
+                  </Link>
+                )
+              )}
               {isAuthenticated ? (
                 <>
-                  <Link to="/my-bookings" onClick={() => setOpen(false)}>
+                  <Link to="/my-bookings" onClick={close} className="py-1 text-sm font-semibold text-ink">
                     My bookings
                   </Link>
-                  <Link to="/notifications" onClick={() => setOpen(false)}>
+                  <Link to="/notifications" onClick={close} className="py-1 text-sm font-semibold text-ink">
                     Alerts
                   </Link>
-                  <Link to="/profile" onClick={() => setOpen(false)}>
+                  <Link to="/profile" onClick={close} className="py-1 text-sm font-semibold text-ink">
                     Profile
                   </Link>
-                  <button type="button" className="text-left text-danger" onClick={() => logout()}>
+                  {user?.role === 'DRIVER' ? (
+                    <Link to="/driver" onClick={close} className="py-1 text-sm font-semibold text-ink">
+                      Driver
+                    </Link>
+                  ) : null}
+                  {user?.role === 'ADMIN' ? (
+                    <Link to="/admin" onClick={close} className="py-1 text-sm font-semibold text-ink">
+                      Admin
+                    </Link>
+                  ) : null}
+                  <button type="button" className="py-1 text-left text-sm font-semibold text-ink" onClick={() => logout()}>
                     Log out
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/login" onClick={() => setOpen(false)}>
+                  <Link to="/register/driver" onClick={close} className="py-1 text-sm font-semibold text-ink">
+                    Offer a ride
+                  </Link>
+                  <Link to="/login" onClick={close} className="py-1 text-sm font-semibold text-ink">
                     Log in
                   </Link>
-                  <Link to="/register" onClick={() => setOpen(false)}>
+                  <Link to="/register" onClick={close} className="py-1 text-sm font-semibold text-ink">
                     Register
                   </Link>
                 </>
@@ -113,58 +159,60 @@ export default function PublicLayout() {
           </div>
         ) : null}
       </header>
-      <main className="min-h-dvh">
+      <main id="content" className="min-h-dvh">
         <Outlet />
       </main>
-      <footer className="print-hide mt-20 border-t border-line bg-navy text-white">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-[1.2fr_1fr_1fr]">
+      <footer className="print-hide border-t border-line bg-white text-ink">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <Logo inverted />
-            <p className="mt-3 max-w-sm text-sm text-white/70">
-              Intercity seats you can choose — transparent fares, verified cabs, and a booking flow
-              built for calm travel.
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-coral">Explore</p>
-            <div className="mt-3 flex flex-col gap-2 text-sm text-white/80">
-              <Link to="/search" className="hover:text-white">
-                Find rides
-              </Link>
-              <Link to="/register" className="hover:text-white">
-                Create account
-              </Link>
-              <Link to="/login" className="hover:text-white">
-                Log in
-              </Link>
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-coral">Trust</p>
-            <ul className="mt-3 space-y-2 text-sm text-white/80">
-              <li>Secure payments</li>
-              <li>Verified operators</li>
-              <li>Transparent seat pricing</li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-white/10">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              © {new Date().getFullYear()} RaahiX. Scheduled intercity shared rides. Shehar Se Shehar, Saath Safar.
-            </p>
-            <p>
-              Designed and Developed by{' '}
+            <Logo size="sm" />
+            <p className="mt-3 text-sm text-slate">Scheduled Intercity Shared Rides</p>
+            <p className="mt-2 font-display text-base text-brand-dark">Shehar Se Shehar, Saath Safar.</p>
+            <p className="mt-3 text-sm text-slate">
+              A product by{' '}
               <a
                 href="https://thestackguy.in"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-coral transition hover:text-white"
+                className="font-semibold text-ink underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-dark"
               >
                 The Stack Guy
               </a>
             </p>
           </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate">Explore</p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link to="/search" className="text-ink hover:underline">
+                Find a ride
+              </Link>
+              <a href="/#how-it-works" className="text-ink hover:underline">
+                How it works
+              </a>
+              <a href="/#for-drivers" className="text-ink hover:underline">
+                For drivers
+              </a>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate">Account</p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link to="/login" className="text-ink hover:underline">
+                Log in
+              </Link>
+              <Link to="/register" className="text-ink hover:underline">
+                Register
+              </Link>
+              <Link to="/register/driver" className="text-ink hover:underline">
+                Offer a ride
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-line">
+          <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-slate">
+            © {new Date().getFullYear()} RaahiX. Scheduled intercity shared rides.
+          </p>
         </div>
       </footer>
     </div>

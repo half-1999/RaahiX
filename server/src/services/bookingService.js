@@ -24,6 +24,7 @@ import {
 import { requireReason, writeAudit } from './auditService.js';
 import { applyObligation, obligationPercent } from './refundService.js';
 import * as notificationService from './notificationService.js';
+import { quoteSeats } from '../utils/fare.js';
 
 function generateBookingNumber() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -31,10 +32,24 @@ function generateBookingNumber() {
   return `BK${ts}${rnd}`;
 }
 
-export async function hold(userId, { rideId, seatNumbers, pickupLocationId, dropLocationId }) {
+export async function hold(userId, { rideId, seatNumbers, pickupLocationId, dropLocationId, passengerCount }) {
+  const uniqueSeats = [...new Set(seatNumbers)];
+  if (passengerCount != null && Number(passengerCount) !== uniqueSeats.length) {
+    throw new AppError(`Select exactly ${passengerCount} seats for this booking`, {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
   const ride = await Ride.findById(rideId);
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
+  }
+  const openSeats = ride.seats.filter((seat) => seat.status === SEAT_STATUS.AVAILABLE).length;
+  if (!usesSegmentInventory(ride) && uniqueSeats.length > openSeats) {
+    throw new AppError('Not enough seats are available for this booking', {
+      code: ErrorCodes.SEAT_UNAVAILABLE,
+      statusCode: 409,
+    });
   }
   if (usesSegmentInventory(ride)) {
     return holdSegment(userId, rideId, {
@@ -106,8 +121,14 @@ export async function createFromHold(userId, { rideId, holdId, passengers, picku
       passengers,
       selectedSeats: passengers.map((passenger) => passenger.seatNumber),
       passengerCount: passengers.length,
-      amountPerSeat: ride.pricePerSeat,
-      totalAmount: ride.pricePerSeat * passengers.length,
+      ...(() => {
+        const quote = quoteSeats(ride, passengers.map((passenger) => passenger.seatNumber));
+        return {
+          amountPerSeat: quote.amountPerSeat,
+          totalAmount: quote.totalAmount,
+          seatFares: quote.lines,
+        };
+      })(),
       currency: 'INR',
       holdId,
       holdExpiresAt: segmentHold.holdExpiresAt,
@@ -181,9 +202,10 @@ export async function createFromHold(userId, { rideId, holdId, passengers, picku
     ? assertForwardSegment(orderedStops(ride), pickupLocationId, dropLocationId)
     : null;
 
-  const amountPerSeat = ride.pricePerSeat;
+  const quote = quoteSeats(ride, heldSeatNumbers);
+  const amountPerSeat = quote.amountPerSeat;
   const passengerCount = passengers.length;
-  const totalAmount = amountPerSeat * passengerCount;
+  const totalAmount = quote.totalAmount;
   const holdExpiresAt = heldSeats[0].holdExpiresAt;
 
   const booking = await Booking.create({
@@ -199,6 +221,7 @@ export async function createFromHold(userId, { rideId, holdId, passengers, picku
     passengerCount,
     amountPerSeat,
     totalAmount,
+    seatFares: quote.lines,
     currency: 'INR',
     paymentStatus: BOOKING_PAYMENT_STATUS.PENDING,
     bookingStatus: BOOKING_STATUS.PENDING,

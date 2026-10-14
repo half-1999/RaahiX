@@ -1,4 +1,4 @@
-/** Real cab photos, matched by make and model. Uploaded driver photos still win. */
+/** Real car photos, matched by make and model. Uploaded owner photos still win. */
 const CAB_PHOTOS = {
   'maruti|dzire': '/cabs/maruti-dzire.jpg',
   'maruti|ertiga': '/cabs/maruti-ertiga.jpg',

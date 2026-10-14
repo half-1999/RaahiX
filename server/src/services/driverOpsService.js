@@ -274,11 +274,14 @@ export async function createRide(userId, payload) {
     ),
     departureTime,
     arrivalTime,
-    pickupPoint: payload.pickupPoint || route.origin?.city || 'Pickup',
-    dropPoint: payload.dropPoint || route.destination?.city || 'Drop',
+    pickupPoint: payload.pickupPoint || payload.pickupPoints?.[0] || route.origin?.city || 'Pickup',
+    dropPoint: payload.dropPoint || payload.dropPoints?.[0] || route.destination?.city || 'Drop',
+    pickupPoints: [...new Set([payload.pickupPoint, ...(payload.pickupPoints || [])].filter(Boolean))].slice(0, 2),
+    dropPoints: [...new Set([payload.dropPoint, ...(payload.dropPoints || [])].filter(Boolean))].slice(0, 2),
     rideStops: stopsFromRoute(route),
     legs: legsFromStops(stopsFromRoute(route), seats.length),
     pricePerSeat: payload.pricePerSeat,
+    frontSeatPrice: payload.frontSeatPrice ?? null,
     totalSeats: seats.length,
     availableSeats: seats.length,
     seats,
@@ -309,6 +312,11 @@ export async function updateRide(userId, rideId, payload) {
   if (payload.pickupPoint) ride.pickupPoint = payload.pickupPoint.trim();
   if (payload.dropPoint) ride.dropPoint = payload.dropPoint.trim();
   if (payload.pricePerSeat != null) ride.pricePerSeat = Number(payload.pricePerSeat);
+  if (payload.frontSeatPrice !== undefined) {
+    ride.frontSeatPrice = payload.frontSeatPrice === null ? null : Number(payload.frontSeatPrice);
+  }
+  if (payload.pickupPoints) ride.pickupPoints = payload.pickupPoints.slice(0, 2);
+  if (payload.dropPoints) ride.dropPoints = payload.dropPoints.slice(0, 2);
   if (!(ride.arrivalTime > ride.departureTime)) {
     throw new AppError('Arrival must be after departure', {
       code: ErrorCodes.VALIDATION_ERROR,

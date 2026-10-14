@@ -4,6 +4,24 @@ RaahiX is a scheduled intercity shared-ride marketplace. Independent drivers pub
 
 Shehar Se Shehar, Saath Safar. A product by The Stack Guy.
 
+## Brand
+
+The only logo used in the interface is `client/public/brand/raahix-lockup.png`. Do not redraw it, crop it, or substitute another mark.
+
+The product UI is light. Pages, cards, navigation, and dashboards use white and warm off-white. Gold is the action color. Text on gold is charcoal, because white on gold is hard to read.
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| Page | `#F7F6F3` | App background |
+| Surface | `#FFFFFF` | Cards, navigation, dialogs |
+| Text | `#242220` | Primary text and text on gold buttons |
+| Muted | `#5C5F66` | Secondary text |
+| Gold | `#E5AC32` | Primary buttons |
+| Gold text | `#7A5610` | Small gold labels on white |
+| Line | `#E6E4DE` | Borders |
+
+Type is Syne for headings and Manrope for body.
+
 This is a scheduled seat marketplace. It is not instant taxi hailing, centralized dispatch, peer-to-peer carpooling, or live driver tracking.
 
 **This README is the product and engineering source of truth.** Older notes under `docs/` may still describe an earlier model (admin-published rides and gateway checkout). When those notes disagree with this file, follow this file.

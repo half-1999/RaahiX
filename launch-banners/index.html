@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RaahiX launch banners — 1080×1350</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --navy: #101828;
+        --indigo: #635bff;
+        --indigo-soft: #8b7cff;
+        --coral: #ff6b4a;
+        --ivory: #fff9f5;
+        --mist: #f0eeff;
+        --slate: #667085;
+        --line: #e4e7ec;
+        --white: #ffffff;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: #d9dde6;
+        font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+        color: var(--navy);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      .banner {
+        width: 1080px;
+        height: 1350px;
+        overflow: hidden;
+        position: relative;
+        background: var(--ivory);
+      }
+
+      .wordmark { display: block; height: 64px; width: auto; }
+      .wordmark.lg { height: 108px; }
+
+      .kicker {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--coral);
+      }
+
+      .display {
+        font-family: Syne, ui-sans-serif, system-ui, sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.045em;
+        line-height: 0.9;
+      }
+
+      .slide-no {
+        font-family: Syne, sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 0.08em;
+        color: var(--coral);
+      }
+
+      /* ——— 01 Teaser ——— */
+      #teaser {
+        background:
+          radial-gradient(ellipse 70% 50% at 100% 0%, rgb(99 91 255 / 0.38), transparent 60%),
+          radial-gradient(ellipse 55% 40% at 0% 100%, rgb(255 107 74 / 0.22), transparent 62%),
+          var(--navy);
+        color: var(--ivory);
+        padding: 72px 76px 68px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #teaser .top,
+      #showcase .top,
+      #launch .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #teaser .hero {
+        margin-top: 168px;
+        position: relative;
+        z-index: 1;
+      }
+
+      #teaser h1 {
+        font-size: 100px;
+        max-width: 860px;
+        color: var(--ivory);
+      }
+
+      #teaser .tagline {
+        margin-top: 36px;
+        font-family: Syne, sans-serif;
+        font-size: 40px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #ffffff;
+      }
+
+      #teaser .mark {
+        position: absolute;
+        right: 76px;
+        bottom: 250px;
+        width: 240px;
+        height: 240px;
+        opacity: 0.95;
+      }
+
+      #teaser .route {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 28px;
+        align-items: end;
+        padding-top: 48px;
+        border-top: 1px solid rgb(255 255 255 / 0.14);
+      }
+
+      #teaser .route p.label {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--coral);
+      }
+
+      #teaser .route strong {
+        display: block;
+        margin-top: 8px;
+        font-family: Syne, sans-serif;
+        font-size: 54px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      #teaser .route .to { text-align: right; }
+
+      #teaser .spine {
+        width: 88px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 18px;
+      }
+
+      #teaser .spine i {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: var(--coral);
+        display: block;
+      }
+
+      #teaser .spine span {
+        width: 2px;
+        height: 72px;
+        background: linear-gradient(var(--coral), var(--indigo));
+      }
+
+      /* ——— 02 Showcase ——— */
+      #showcase {
+        padding: 64px 68px 60px;
+        display: flex;
+        flex-direction: column;
+        background:
+          radial-gradient(ellipse 80% 42% at 100% -8%, rgb(99 91 255 / 0.1), transparent),
+          radial-gradient(ellipse 50% 30% at 0% 100%, rgb(255 107 74 / 0.08), transparent),
+          var(--ivory);
+      }
+
+      #showcase h1 {
+        margin-top: 22px;
+        font-size: 68px;
+        max-width: 920px;
+        color: var(--navy);
+      }
+
+      #showcase .lede {
+        margin-top: 16px;
+        max-width: 860px;
+        font-size: 28px;
+        line-height: 1.35;
+        color: var(--slate);
+      }
+
+      .panel {
+        margin-top: 28px;
+        flex-shrink: 0;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: 0 18px 40px -24px rgb(16 24 40 / 0.28);
+        overflow: hidden;
+      }
+
+      .search {
+        padding: 28px 28px 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 18px;
+      }
+
+      .field { display: flex; flex-direction: column; gap: 8px; }
+      .field.wide { grid-column: 1 / -1; }
+
+      .field label {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--slate);
+      }
+
+      .control {
+        height: 64px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--white);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 18px;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--navy);
+      }
+
+      .dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        flex: none;
+      }
+
+      .find {
+        height: 64px;
+        border: 0;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: linear-gradient(135deg, #635bff, #8b7cff);
+        color: white;
+        font-family: Manrope, sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        box-shadow: 0 18px 40px -20px rgb(99 91 255 / 0.55);
+      }
+
+      .ride {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        border-top: 1px solid var(--line);
+        height: 248px;
+      }
+
+      .ride img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 42% 46%;
+      }
+
+      .ride-body {
+        padding: 26px 28px 24px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .ride-body h2 {
+        font-family: Syne, sans-serif;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .meta {
+        margin-top: 8px;
+        font-size: 24px;
+        color: var(--slate);
+        font-weight: 600;
+      }
+
+      .meta b { color: var(--navy); font-weight: 700; }
+
+      .chips {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: var(--mist);
+        color: var(--navy);
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .ride-foot {
+        margin-top: auto;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .fare {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--slate);
+      }
+
+      .fare strong {
+        display: block;
+        font-family: Syne, sans-serif;
+        font-size: 32px;
+        color: var(--indigo);
+        letter-spacing: -0.03em;
+      }
+
+      .seats {
+        height: 56px;
+        padding: 0 22px;
+        border-radius: 14px;
+        border: 0;
+        background-image: linear-gradient(135deg, #635bff, #8b7cff);
+        color: white;
+        font-family: Manrope, sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .steps {
+        margin-top: 28px;
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+
+      .steps article {
+        border-top: 3px solid var(--navy);
+        padding-top: 16px;
+      }
+
+      .steps .n {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        color: var(--coral);
+      }
+
+      .steps h3 {
+        margin-top: 8px;
+        font-family: Syne, sans-serif;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .steps p {
+        margin-top: 8px;
+        font-size: 22px;
+        line-height: 1.35;
+        color: var(--slate);
+      }
+
+      /* ——— 03 Launch ——— */
+      #launch {
+        background:
+          radial-gradient(ellipse 68% 46% at 100% -6%, rgb(99 91 255 / 0.42), transparent 58%),
+          radial-gradient(ellipse 50% 36% at 0% 108%, rgb(255 107 74 / 0.2), transparent 60%),
+          var(--navy);
+        color: var(--ivory);
+        padding: 72px 76px 68px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #launch h1 {
+        margin-top: 28px;
+        font-size: 78px;
+        max-width: 928px;
+        color: var(--ivory);
+      }
+
+      #launch .logo-lockup { margin-top: 36px; }
+
+      #launch .desc {
+        margin-top: 36px;
+        max-width: 820px;
+        font-size: 36px;
+        line-height: 1.35;
+        color: rgb(255 249 245 / 0.82);
+      }
+
+      .cta-row {
+        margin-top: 48px;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 92px;
+        padding: 0 42px;
+        border-radius: 18px;
+        background-image: linear-gradient(135deg, #635bff, #8b7cff);
+        color: white;
+        font-size: 34px;
+        font-weight: 800;
+        box-shadow: 0 18px 40px -18px rgb(99 91 255 / 0.7);
+      }
+
+      .url {
+        font-size: 30px;
+        font-weight: 700;
+        color: rgb(255 249 245 / 0.78);
+      }
+
+      .trust {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+        padding-top: 40px;
+        border-top: 1px solid rgb(255 255 255 / 0.14);
+      }
+
+      .trust h3 {
+        font-family: Syne, sans-serif;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .trust p {
+        margin-top: 10px;
+        font-size: 22px;
+        line-height: 1.35;
+        color: rgb(255 249 245 / 0.68);
+      }
+
+      .credit {
+        margin-top: 28px;
+        font-size: 22px;
+        font-weight: 600;
+        color: rgb(255 249 245 / 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <section class="banner" id="teaser">
+      <div class="top">
+        <svg class="wordmark" viewBox="0 0 252 86" fill="none" role="img" aria-label="RaahiX">
+          <g stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 62 V16" />
+            <path d="M10 16 H24 C38 16 38 40 24 40 H10" />
+            <path d="M20 40 L36 62" />
+            <path d="M68 62 V38" />
+            <path d="M68 50 C68 36 46 36 46 50 C46 64 68 64 68 50" />
+            <path d="M104 62 V38" />
+            <path d="M104 50 C104 36 82 36 82 50 C82 64 104 64 104 50" />
+            <path d="M122 62 V16" />
+            <path d="M122 40 C122 28 148 28 148 44 V62" />
+            <path d="M170 64 V40" />
+          </g>
+          <circle cx="170" cy="24" r="3.6" fill="#FFFFFF" />
+          <g stroke="#635BFF" stroke-width="13" stroke-linecap="round">
+            <path d="M164 8 L190 34" />
+            <path d="M236 8 L210 34" />
+            <path d="M164 78 L190 52" />
+            <path d="M236 78 L210 52" />
+          </g>
+        </svg>
+        <span class="slide-no">01</span>
+      </div>
+
+      <svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <g stroke="#635BFF" stroke-width="7" stroke-linecap="round">
+          <path d="M16 16 L26 26" />
+          <path d="M48 16 L38 26" />
+          <path d="M16 48 L26 38" />
+          <path d="M48 48 L38 38" />
+        </g>
+      </svg>
+
+      <div class="hero">
+        <p class="kicker">Scheduled intercity shared rides</p>
+        <h1 class="display">SOMETHING<br />BIG IS HERE</h1>
+        <p class="tagline">Shehar Se Shehar, Saath Safar.</p>
+      </div>
+
+      <div class="route">
+        <div>
+          <p class="label">From</p>
+          <strong>Delhi</strong>
+        </div>
+        <div class="spine" aria-hidden="true"><i></i><span></span><i></i></div>
+        <div class="to">
+          <p class="label">To</p>
+          <strong>Bareilly</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="banner" id="showcase">
+      <div class="top">
+        <svg class="wordmark" viewBox="0 0 252 86" fill="none" role="img" aria-label="RaahiX">
+          <g stroke="#101828" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 62 V16" />
+            <path d="M10 16 H24 C38 16 38 40 24 40 H10" />
+            <path d="M20 40 L36 62" />
+            <path d="M68 62 V38" />
+            <path d="M68 50 C68 36 46 36 46 50 C46 64 68 64 68 50" />
+            <path d="M104 62 V38" />
+            <path d="M104 50 C104 36 82 36 82 50 C82 64 104 64 104 50" />
+            <path d="M122 62 V16" />
+            <path d="M122 40 C122 28 148 28 148 44 V62" />
+            <path d="M170 64 V40" />
+          </g>
+          <circle cx="170" cy="24" r="3.6" fill="#101828" />
+          <g stroke="#635BFF" stroke-width="13" stroke-linecap="round">
+            <path d="M164 8 L190 34" />
+            <path d="M236 8 L210 34" />
+            <path d="M164 78 L190 52" />
+            <path d="M236 78 L210 52" />
+          </g>
+        </svg>
+        <span class="slide-no">02</span>
+      </div>
+
+      <p class="kicker" style="margin-top: 48px">The product</p>
+      <h1 class="display">Find a ride.<br />Choose the seat.</h1>
+      <p class="lede">Search a published intercity ride, hold an open seat, and pay the driver directly.</p>
+
+      <div class="panel">
+        <div class="search">
+          <div class="field">
+            <label>From</label>
+            <div class="control"><span class="dot" style="background:#635bff"></span>Delhi</div>
+          </div>
+          <div class="field">
+            <label>To</label>
+            <div class="control"><span class="dot" style="background:#ff6b4a"></span>Bareilly</div>
+          </div>
+          <div class="field">
+            <label>Travel date</label>
+            <div class="control">10 Oct 2026</div>
+          </div>
+          <div class="field">
+            <label>Passengers</label>
+            <div class="control">1</div>
+          </div>
+          <div class="field wide">
+            <div class="find">Find rides</div>
+          </div>
+        </div>
+        <article class="ride">
+          <img src="../client/public/cabs/toyota-innova-crysta.jpg" alt="Toyota Innova Crysta" />
+          <div class="ride-body">
+            <h2>Toyota Innova Crysta</h2>
+            <p class="meta"><b>New</b> · Delhi → Bareilly</p>
+            <div class="chips">
+              <span class="chip">AC</span>
+              <span class="chip">Charging</span>
+            </div>
+            <div class="ride-foot">
+              <p class="fare">Paid to the driver<strong>Per seat</strong></p>
+              <div class="seats">View seats</div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="steps">
+        <article>
+          <p class="n">01</p>
+          <h3>Find a ride</h3>
+          <p>Pickup, drop, date, and how many seats you need.</p>
+        </article>
+        <article>
+          <p class="n">02</p>
+          <h3>Choose your seat</h3>
+          <p>See the cabin and hold the seats that are open.</p>
+        </article>
+        <article>
+          <p class="n">03</p>
+          <h3>Pay and confirm</h3>
+          <p>Pay the driver. The booking confirms after approval.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="banner" id="launch">
+      <div class="top">
+        <svg class="wordmark" viewBox="0 0 252 86" fill="none" role="img" aria-label="RaahiX">
+          <g stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 62 V16" />
+            <path d="M10 16 H24 C38 16 38 40 24 40 H10" />
+            <path d="M20 40 L36 62" />
+            <path d="M68 62 V38" />
+            <path d="M68 50 C68 36 46 36 46 50 C46 64 68 64 68 50" />
+            <path d="M104 62 V38" />
+            <path d="M104 50 C104 36 82 36 82 50 C82 64 104 64 104 50" />
+            <path d="M122 62 V16" />
+            <path d="M122 40 C122 28 148 28 148 44 V62" />
+            <path d="M170 64 V40" />
+          </g>
+          <circle cx="170" cy="24" r="3.6" fill="#FFFFFF" />
+          <g stroke="#635BFF" stroke-width="13" stroke-linecap="round">
+            <path d="M164 8 L190 34" />
+            <path d="M236 8 L210 34" />
+            <path d="M164 78 L190 52" />
+            <path d="M236 78 L210 52" />
+          </g>
+        </svg>
+        <span class="slide-no">03</span>
+      </div>
+
+      <p class="kicker" style="margin-top: 88px">It’s live</p>
+      <h1 class="display">INTRODUCING</h1>
+      <div class="logo-lockup">
+        <svg class="wordmark lg" viewBox="0 0 252 86" fill="none" role="img" aria-label="RaahiX">
+          <g stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 62 V16" />
+            <path d="M10 16 H24 C38 16 38 40 24 40 H10" />
+            <path d="M20 40 L36 62" />
+            <path d="M68 62 V38" />
+            <path d="M68 50 C68 36 46 36 46 50 C46 64 68 64 68 50" />
+            <path d="M104 62 V38" />
+            <path d="M104 50 C104 36 82 36 82 50 C82 64 104 64 104 50" />
+            <path d="M122 62 V16" />
+            <path d="M122 40 C122 28 148 28 148 44 V62" />
+            <path d="M170 64 V40" />
+          </g>
+          <circle cx="170" cy="24" r="3.6" fill="#FFFFFF" />
+          <g stroke="#635BFF" stroke-width="13" stroke-linecap="round">
+            <path d="M164 8 L190 34" />
+            <path d="M236 8 L210 34" />
+            <path d="M164 78 L190 52" />
+            <path d="M236 78 L210 52" />
+          </g>
+        </svg>
+      </div>
+      <p class="desc">Discover scheduled intercity shared rides, choose your pickup and drop, book available seats, and travel together.</p>
+      <div class="cta-row">
+        <div class="cta">Explore now</div>
+        <p class="url">raahi-x.vercel.app</p>
+      </div>
+
+      <div class="trust">
+        <article>
+          <h3>Scheduled travel</h3>
+          <p>You book a published seat, not a live taxi.</p>
+        </article>
+        <article>
+          <h3>Verified drivers</h3>
+          <p>A driver publishes rides only after verification.</p>
+        </article>
+        <article>
+          <h3>Clear payment</h3>
+          <p>Pay the driver. Confirmation follows approval.</p>
+        </article>
+      </div>
+      <p class="credit">A product by The Stack Guy</p>
+    </section>
+  </body>
+</html>

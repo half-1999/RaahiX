@@ -8,6 +8,7 @@ import DriverLayout from './components/layout/DriverLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
+import BrandLoader from './components/brand/BrandLoader';
 
 import HomePage from './pages/public/HomePage';
 import SearchPage from './pages/public/SearchPage';
@@ -48,6 +49,12 @@ const queryClient = new QueryClient({
   },
 });
 
+function BootGate({ children }) {
+  const { loading } = useAuth();
+  if (loading) return <BrandLoader />;
+  return children;
+}
+
 function RoleHomeRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -61,6 +68,7 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <BootGate>
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
@@ -175,6 +183,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
+          </BootGate>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

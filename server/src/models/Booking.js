@@ -25,6 +25,10 @@ const bookingSchema = new mongoose.Schema(
     passengerCount: { type: Number, required: true, min: 1 },
     amountPerSeat: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
+    seatFares: {
+      type: [{ seatNumber: { type: String }, amount: { type: Number, min: 0 } }],
+      default: [],
+    },
     currency: { type: String, default: 'INR' },
     paymentStatus: {
       type: String,

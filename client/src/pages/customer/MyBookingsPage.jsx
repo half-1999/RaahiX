@@ -65,7 +65,7 @@ export default function MyBookingsPage() {
             type="button"
             onClick={() => setTab(name)}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              tab === name ? 'bg-brand text-white' : 'bg-white text-slate'
+              tab === name ? 'bg-brand text-ink' : 'bg-white text-slate'
             }`}
           >
             {name}

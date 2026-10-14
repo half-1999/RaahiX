@@ -31,7 +31,10 @@ export default function DriverRidesPage() {
     arrivalTime: defaultWhen(30),
     pickupPoint: '',
     dropPoint: '',
+    secondPickup: '',
+    secondDrop: '',
     pricePerSeat: '500',
+    frontSeatPrice: '',
   });
 
   const routesQuery = useQuery({
@@ -51,7 +54,10 @@ export default function DriverRidesPage() {
         arrivalTime: new Date(form.arrivalTime).toISOString(),
         pickupPoint: form.pickupPoint,
         dropPoint: form.dropPoint,
+        pickupPoints: [form.pickupPoint, form.secondPickup].map((point) => point.trim()).filter(Boolean).slice(0, 2),
+        dropPoints: [form.dropPoint, form.secondDrop].map((point) => point.trim()).filter(Boolean).slice(0, 2),
         pricePerSeat: Number(form.pricePerSeat),
+        ...(form.frontSeatPrice === '' ? {} : { frontSeatPrice: Number(form.frontSeatPrice) }),
       }),
     onSuccess: () => {
       setFormError('');
@@ -117,7 +123,7 @@ export default function DriverRidesPage() {
           required
         />
         <Select
-          label="Cab"
+          label="Car"
           value={form.vehicleId}
           onChange={(event) => setForm((current) => ({ ...current, vehicleId: event.target.value }))}
           options={(vehiclesQuery.data?.vehicles || [])
@@ -126,7 +132,7 @@ export default function DriverRidesPage() {
               value: vehicle._id,
               label: `${vehicle.registrationNumber} · ${vehicle.make} ${vehicle.model}`,
             }))}
-          placeholder="Choose your cab"
+          placeholder="Choose your car"
           required
         />
         <label className="block text-sm font-medium text-navy">
@@ -168,6 +174,24 @@ export default function DriverRidesPage() {
           />
         </label>
         <label className="block text-sm font-medium text-navy">
+          Second pickup
+          <input
+            className="mt-1 h-11 w-full rounded-xl border border-line px-3"
+            value={form.secondPickup}
+            placeholder="Optional"
+            onChange={(event) => setForm((current) => ({ ...current, secondPickup: event.target.value }))}
+          />
+        </label>
+        <label className="block text-sm font-medium text-navy">
+          Second drop-off
+          <input
+            className="mt-1 h-11 w-full rounded-xl border border-line px-3"
+            value={form.secondDrop}
+            placeholder="Optional"
+            onChange={(event) => setForm((current) => ({ ...current, secondDrop: event.target.value }))}
+          />
+        </label>
+        <label className="block text-sm font-medium text-navy">
           Price per seat
           <input
             required
@@ -176,6 +200,17 @@ export default function DriverRidesPage() {
             className="mt-1 h-11 w-full rounded-xl border border-line px-3"
             value={form.pricePerSeat}
             onChange={(event) => setForm((current) => ({ ...current, pricePerSeat: event.target.value }))}
+          />
+        </label>
+        <label className="block text-sm font-medium text-navy">
+          Front-seat price
+          <input
+            type="number"
+            min="0"
+            className="mt-1 h-11 w-full rounded-xl border border-line px-3"
+            value={form.frontSeatPrice}
+            placeholder="Same as other seats if empty"
+            onChange={(event) => setForm((current) => ({ ...current, frontSeatPrice: event.target.value }))}
           />
         </label>
         <div className="flex items-end">

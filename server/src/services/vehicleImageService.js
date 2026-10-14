@@ -44,7 +44,7 @@ async function ownVehicle(userId, vehicleId) {
 export async function addImage(userId, vehicleId, image) {
   const vehicle = await ownVehicle(userId, vehicleId);
   if ((vehicle.images || []).length >= 4) {
-    throw new AppError('A cab can have up to 4 photos', {
+    throw new AppError('A car can have up to 4 photos', {
       code: ErrorCodes.VALIDATION_ERROR,
       statusCode: 400,
     });
@@ -77,7 +77,7 @@ export async function readPrimary(vehicleId) {
   const vehicle = await Vehicle.findById(vehicleId).select('images');
   const image = vehicle?.images?.find((item) => item.primary) || vehicle?.images?.[0];
   if (!image) {
-    throw new AppError('No cab photo', { code: ErrorCodes.VALIDATION_ERROR, statusCode: 404 });
+    throw new AppError('No car photo', { code: ErrorCodes.VALIDATION_ERROR, statusCode: 404 });
   }
   const buffer = await fs.readFile(path.join(imageDir, image.file));
   return { buffer, mime: image.mime };

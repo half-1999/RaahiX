@@ -52,7 +52,7 @@ export default function RideReviews({ vehicleId }) {
 
       {reviewsQuery.isLoading ? <p className="mt-3 text-sm text-slate">Loading reviews…</p> : null}
       {!reviews.length && !reviewsQuery.isLoading ? (
-        <p className="mt-3 text-sm text-slate">No reviews yet for this cab.</p>
+        <p className="mt-3 text-sm text-slate">No reviews yet for this car.</p>
       ) : null}
       <ul className="mt-3 space-y-3">
         {reviews.map((review) => (
@@ -73,7 +73,7 @@ export default function RideReviews({ vehicleId }) {
             save.mutate();
           }}
         >
-          <p className="text-sm font-semibold text-navy">You rode this cab. Leave a review.</p>
+          <p className="text-sm font-semibold text-navy">You rode in this car. Leave a review.</p>
           {error ? <Alert tone="error">{error}</Alert> : null}
           <label className="block text-sm">
             Rating
@@ -93,7 +93,7 @@ export default function RideReviews({ vehicleId }) {
             className="w-full rounded-xl border border-line p-3 text-sm"
             rows={3}
             value={comment}
-            placeholder="How was the cab?"
+            placeholder="How was the car?"
             onChange={(event) => setComment(event.target.value)}
           />
           <Button type="submit" size="sm" loading={save.isPending}>
@@ -103,7 +103,7 @@ export default function RideReviews({ vehicleId }) {
       ) : (
         <p className="mt-4 text-xs text-slate">
           {isAuthenticated
-            ? 'Reviews can be posted only after you have ridden this cab.'
+            ? 'Reviews can be posted only after you have ridden in this car.'
             : 'Sign in after a completed ride to post a review. Guests can read reviews only.'}
         </p>
       )}

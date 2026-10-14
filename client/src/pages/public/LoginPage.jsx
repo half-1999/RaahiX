@@ -41,7 +41,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
       <h1>
-        <Logo className="h-12" />
+        <Logo size="lg" />
       </h1>
       <p className="mt-1 text-sm text-slate">Shehar Se Shehar, Saath Safar. Log in to book a seat or run your rides.</p>
       <div className="mt-4 rounded-xl border border-line bg-white p-3 text-xs text-black">
@@ -88,11 +88,11 @@ export default function LoginPage() {
       </form>
       <p className="mt-4 text-center text-sm text-slate">
         New here?{' '}
-        <Link to="/register/customer" className="font-semibold text-brand">
+        <Link to="/register/customer" className="font-semibold text-brand-dark">
           Passenger signup
         </Link>
         {' · '}
-        <Link to="/register/driver" className="font-semibold text-brand">
+        <Link to="/register/driver" className="font-semibold text-brand-dark">
           Driver signup
         </Link>
       </p>

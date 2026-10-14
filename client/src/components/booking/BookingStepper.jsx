@@ -26,8 +26,8 @@ export default function BookingStepper({ current = 'search', className }) {
               <div
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition',
-                  done && 'bg-brand text-white',
-                  active && 'bg-brand-gradient text-white shadow-[var(--shadow-lift)]',
+                  done && 'bg-brand text-ink',
+                  active && 'bg-brand text-ink shadow-[var(--shadow-lift)]',
                   !done && !active && 'border border-line bg-white text-slate'
                 )}
                 aria-current={active ? 'step' : undefined}

@@ -46,7 +46,7 @@ export default function AdminLayout() {
           className={({ isActive }) =>
             cn(
               'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
-              isActive ? 'bg-brand text-white' : 'text-ink-muted hover:bg-surface-2 hover:text-ink'
+              isActive ? 'bg-brand text-ink' : 'text-ink-muted hover:bg-surface-2 hover:text-ink'
             )
           }
         >
@@ -61,8 +61,8 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-surface text-ink">
       <div className="flex min-h-screen">
         <aside className="hidden w-60 shrink-0 border-r border-line bg-white p-4 lg:block">
-          <Link to="/admin" className="mb-6 flex items-end gap-2">
-            <Logo className="h-7" />
+          <Link to="/admin" aria-label="RaahiX" className="mb-6 flex items-end gap-2">
+            <Logo size="sm" />
             <span className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate">Ops</span>
           </Link>
           {nav}
@@ -105,7 +105,7 @@ export default function AdminLayout() {
           <aside className="relative z-10 h-full w-72 bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <span className="flex items-end gap-2">
-                <Logo className="h-7" />
+                <Logo size="sm" />
                 <span className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate">Ops</span>
               </span>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close">

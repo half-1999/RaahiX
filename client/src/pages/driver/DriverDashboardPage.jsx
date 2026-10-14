@@ -130,7 +130,7 @@ export default function DriverDashboardPage() {
           { label: 'Confirmed bookings', value: bookings.filter((b) => b.bookingStatus === 'CONFIRMED').length, icon: IndianRupee },
         ].map((card) => (
           <div key={card.label} className="rounded-2xl border border-line bg-white p-4 shadow-[var(--shadow-soft)]">
-            <card.icon className="h-4 w-4 text-brand" />
+            <card.icon className="h-4 w-4 text-brand-dark" />
             <p className="mt-2 font-display text-3xl font-bold text-navy">{card.value}</p>
             <p className="text-sm text-slate">{card.label}</p>
           </div>

@@ -21,8 +21,8 @@ export default function DriverLayout() {
       <header className="sticky top-0 z-30 border-b border-line bg-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4 md:max-w-5xl md:pl-60">
           <div>
-            <Link to="/driver" aria-label="RaahiX driver desk">
-              <Logo />
+            <Link to="/driver" aria-label="RaahiX">
+              <Logo size="sm" />
             </Link>
             <p className="text-xs text-ink-muted">{user?.name}</p>
           </div>
@@ -77,7 +77,7 @@ export default function DriverLayout() {
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center gap-1 py-2 text-xs font-medium',
-                  isActive ? 'text-brand' : 'text-ink-muted'
+                  isActive ? 'text-brand-dark' : 'text-ink-muted'
                 )
               }
             >

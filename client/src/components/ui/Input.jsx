@@ -18,7 +18,7 @@ export default function Input({
       <input
         id={inputId}
         className={cn(
-          'h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-black placeholder:text-ink-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-surface-2 disabled:text-black/60',
+          'h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink placeholder:text-slate outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand/30 disabled:bg-surface-2 disabled:text-slate',
           error && 'border-danger focus:border-danger focus:ring-danger/20',
           inputClassName
         )}

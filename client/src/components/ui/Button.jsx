@@ -1,16 +1,12 @@
 import { cn } from '../../utils/cn';
 
 const variants = {
-  primary:
-    'bg-brand bg-brand-gradient text-white shadow-[var(--shadow-lift)] hover:brightness-105 active:scale-[0.98] focus-visible:ring-brand',
-  secondary:
-    'bg-mist text-black hover:bg-indigo-soft focus-visible:ring-brand/40 active:scale-[0.98]',
-  outline:
-    'border border-line bg-white text-black hover:border-brand/40 hover:bg-mist focus-visible:ring-brand/40 active:scale-[0.98]',
-  ghost: 'text-black hover:bg-mist hover:text-black focus-visible:ring-brand/30',
-  danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger active:scale-[0.98]',
-  accent:
-    'bg-coral text-white hover:brightness-105 focus-visible:ring-coral active:scale-[0.98]',
+  primary: 'rx-btn rx-btn-primary',
+  secondary: 'rx-btn rx-btn-secondary',
+  outline: 'rx-btn rx-btn-outline',
+  ghost: 'rx-btn rx-btn-ghost',
+  danger: 'rx-btn rx-btn-danger',
+  accent: 'rx-btn rx-btn-primary',
 };
 
 const sizes = {
@@ -34,7 +30,7 @@ export default function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 font-semibold transition duration-200 focus-visible:outline-none',
         variants[variant],
         sizes[size],
         className

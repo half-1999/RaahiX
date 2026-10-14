@@ -112,7 +112,7 @@ export const markRefund = asyncHandler(async (req, res) => {
 
 export const addVehicleImage = asyncHandler(async (req, res) => {
   const vehicle = await vehicleImageService.addImage(req.user._id, req.params.vehicleId, req.body.image);
-  success(res, { message: 'Cab photo saved', data: { vehicle } });
+  success(res, { message: 'Car photo saved', data: { vehicle } });
 });
 
 export const removeVehicleImage = asyncHandler(async (req, res) => {
@@ -121,7 +121,7 @@ export const removeVehicleImage = asyncHandler(async (req, res) => {
     req.params.vehicleId,
     req.params.imageId
   );
-  success(res, { message: 'Cab photo removed', data: { vehicle } });
+  success(res, { message: 'Car photo removed', data: { vehicle } });
 });
 
 export const reviewPayment = asyncHandler(async (req, res) => {

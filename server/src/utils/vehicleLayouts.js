@@ -29,7 +29,7 @@ export const VEHICLE_TYPE_OPTIONS = [
 
 export function vehicleTypeLabel(type) {
   const normalized = normalizeVehicleType(type);
-  return VEHICLE_TYPE_OPTIONS.find((o) => o.value === normalized)?.label || type || 'Cab';
+  return VEHICLE_TYPE_OPTIONS.find((o) => o.value === normalized)?.label || type || 'Car';
 }
 
 /**

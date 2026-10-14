@@ -11,7 +11,6 @@ import {
   Shield,
   Star,
   Sun,
-  UserRound,
   Users,
   Usb,
   Wifi,
@@ -55,7 +54,7 @@ const amenityIcon = {
   Water: Droplets,
 };
 
-export default function RideCard({ ride }) {
+export default function RideCard({ ride, passengers = 1 }) {
   const id = entityId(ride);
   const origin = ride.route?.origin || ride.origin;
   const destination = ride.route?.destination || ride.destination;
@@ -97,14 +96,14 @@ export default function RideCard({ ride }) {
               </p>
             </div>
             <div className="text-right">
-              <p className="font-display text-2xl font-bold text-brand">{formatCurrency(price)}</p>
+              <p className="font-display text-2xl font-bold text-brand-dark">{formatCurrency(price)}</p>
               <p className="text-xs text-slate">per seat</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-navy">
             <span className="inline-flex items-center gap-1.5 font-semibold">
-              <Clock3 className="h-4 w-4 text-brand" />
+              <Clock3 className="h-4 w-4 text-brand-dark" />
               {formatTime(ride.departureTime)}
               <span className="text-slate">→</span>
               {formatTime(ride.arrivalTime)}
@@ -115,16 +114,12 @@ export default function RideCard({ ride }) {
               </span>
             ) : null}
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-soft px-2 py-1 text-sm font-bold text-navy">
-              <Users className="h-4 w-4 text-brand" />
+              <Users className="h-4 w-4 text-brand-dark" />
               {seats ?? '—'} seats left
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate">
-              <UserRound className="h-3.5 w-3.5" />
-              {ride.driver?.name || 'Driver'}
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate">
               <CarFront className="h-3.5 w-3.5" />
-              {ride.vehicle?.registrationNumber || name}
+              {name}
             </span>
             {ride.pickupPoint ? (
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate">
@@ -147,7 +142,7 @@ export default function RideCard({ ride }) {
           </div>
 
           <div className="mt-auto flex justify-end">
-            <Link to={`/rides/${id}`}>
+            <Link to={`/rides/${id}?passengers=${Math.max(1, Number(passengers) || 1)}`}>
               <Button size="sm">View seats</Button>
             </Link>
           </div>

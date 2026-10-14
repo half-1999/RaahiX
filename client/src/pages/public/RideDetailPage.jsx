@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Armchair, Info } from 'lucide-react';
 import { rideService } from '../../services/rideService';
@@ -35,6 +35,7 @@ function toSeatNumber(seat) {
 
 export default function RideDetailPage() {
   const { rideId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
@@ -46,6 +47,10 @@ export default function RideDetailPage() {
   const [formError, setFormError] = useState('');
   const [hovered, setHovered] = useState(null);
   const [focusSeat, setFocusSeat] = useState(null);
+  const passengerLimit = Math.min(6, Math.max(1, Number(searchParams.get('passengers')) || 1));
+  const [pickupChoice, setPickupChoice] = useState('');
+  const [dropChoice, setDropChoice] = useState('');
+  const locationRef = useRef(null);
 
   const rideQuery = useQuery({
     queryKey: ['rides', rideId],
@@ -97,7 +102,13 @@ export default function RideDetailPage() {
 
   const holdMutation = useMutation({
     mutationFn: (seatNumbers) =>
-      bookingService.hold({ rideId, seatNumbers: seatNumbers || selected }),
+      bookingService.hold({
+        rideId,
+        seatNumbers: seatNumbers || selected,
+        passengerCount: passengerLimit,
+        ...(pickupChoice.startsWith('id:') ? { pickupLocationId: pickupChoice.slice(3) } : {}),
+        ...(dropChoice.startsWith('id:') ? { dropLocationId: dropChoice.slice(3) } : {}),
+      }),
     onSuccess: (data, seatNumbers) => applyHoldSuccess(data, seatNumbers || selected),
     onError: (err) => {
       const status = err?.response?.status;
@@ -140,12 +151,38 @@ export default function RideDetailPage() {
   const toggleSeat = (seatNumber) => {
     if (hold) return;
     setSelected((prev) => {
-      const next = prev.includes(seatNumber)
-        ? prev.filter((s) => s !== seatNumber)
-        : [...prev, seatNumber];
+      if (prev.includes(seatNumber)) {
+        setFormError('');
+        setFocusSeat(seatNumber);
+        return prev.filter((s) => s !== seatNumber);
+      }
+      if (prev.length >= passengerLimit) {
+        setFormError(
+          `You can select exactly ${passengerLimit} seat${passengerLimit === 1 ? '' : 's'} for this booking.`
+        );
+        return prev;
+      }
+      setFormError('');
       setFocusSeat(seatNumber);
-      return next;
+      return [...prev, seatNumber];
     });
+  };
+
+  const continueBooking = () => {
+    if (!pickupChoice || !dropChoice) {
+      setFormError('Please select your pickup and drop-off locations to continue.');
+      locationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (selected.length !== passengerLimit) {
+      setFormError(`Select exactly ${passengerLimit} available seat${passengerLimit === 1 ? '' : 's'} to continue.`);
+      return;
+    }
+    if (!canBook) {
+      goLogin();
+      return;
+    }
+    holdMutation.mutate(selected);
   };
 
   const goLogin = () => {
@@ -170,7 +207,34 @@ export default function RideDetailPage() {
 
   const activeSeat = focusSeat || hovered?.seatNumber || seatNumbers[0];
   const activeMeta = activeSeat ? seatMeta(activeSeat) : null;
-  const fareTotal = price * (seatNumbers.length || selected.length || 0);
+  const priceForSeat = (seatNumber) => {
+    const meta = seatMeta(seatNumber);
+    if (meta.premium && ride?.frontSeatPrice != null && ride?.frontSeatPrice !== '') {
+      return Number(ride.frontSeatPrice);
+    }
+    return price;
+  };
+  const fareTotal = (seatNumbers.length ? seatNumbers : selected).reduce(
+    (sum, seatNumber) => sum + priceForSeat(seatNumber),
+    0
+  );
+  const locationChoices = (kind) => {
+    const named = kind === 'pickup' ? ride?.pickupPoints : ride?.dropPoints;
+    const primary = kind === 'pickup' ? ride?.pickupPoint : ride?.dropPoint;
+    const stops = (ride?.rideStops || []).filter((stop) =>
+      kind === 'pickup' ? stop.pickupAllowed !== false : stop.dropAllowed !== false
+    );
+    if (named?.length) return named.slice(0, 2).map((label) => ({ value: `name:${label}`, label }));
+    if (stops.length) {
+      return stops.slice(0, 2).map((stop) => ({
+        value: stop.locationId ? `id:${stop.locationId}` : `name:${stop.name || stop.city}`,
+        label: stop.name || stop.city,
+      }));
+    }
+    return primary ? [{ value: `name:${primary}`, label: primary }] : [];
+  };
+  const pickupOptions = locationChoices('pickup');
+  const dropOptions = locationChoices('drop');
 
   if (rideQuery.isLoading || seatsQuery.isLoading) {
     return (
@@ -215,11 +279,40 @@ export default function RideDetailPage() {
               <h2 className="font-display text-lg font-bold text-navy">Cabin layout</h2>
               <SeatLegend />
             </div>
+            <div ref={locationRef} className="mb-4 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-navy">
+                Pickup
+                <select
+                  className="mt-1 h-11 w-full rounded-xl border border-line bg-white px-3"
+                  value={pickupChoice}
+                  onChange={(event) => setPickupChoice(event.target.value)}
+                >
+                  <option value="">Select pickup</option>
+                  {pickupOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-navy">
+                Drop-off
+                <select
+                  className="mt-1 h-11 w-full rounded-xl border border-line bg-white px-3"
+                  value={dropChoice}
+                  onChange={(event) => setDropChoice(event.target.value)}
+                >
+                  <option value="">Select drop-off</option>
+                  {dropOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <SeatMap
               seats={seats}
               selected={selected}
               onToggle={toggleSeat}
               onHover={setHovered}
+              maxSelectable={passengerLimit}
               disabled={Boolean(hold)}
               vehicleType={ride?.vehicle?.vehicleType || ride?.vehicleType}
             />
@@ -230,11 +323,11 @@ export default function RideDetailPage() {
             <div className="rounded-2xl border border-brand/20 bg-indigo-soft/60 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-brand">Seat {activeSeat}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">Seat {activeSeat}</p>
                   <p className="mt-1 font-display text-xl font-bold text-navy">{activeMeta.label}</p>
                   <p className="mt-1 text-sm text-slate">{activeMeta.blurb}</p>
                 </div>
-                <p className="font-display text-xl font-bold text-brand">{formatCurrency(price)}</p>
+                <p className="font-display text-xl font-bold text-brand-dark">{formatCurrency(priceForSeat(activeSeat))}</p>
               </div>
               {selected.includes(activeSeat) && !hold ? (
                 <Button variant="ghost" size="sm" className="mt-2" onClick={() => toggleSeat(activeSeat)}>
@@ -298,7 +391,7 @@ export default function RideDetailPage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate">Passengers</dt>
-                  <dd className="font-semibold text-navy">{selected.length || 0}</dd>
+                  <dd className="font-semibold text-navy">{selected.length} / {passengerLimit}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate">Base fare</dt>
@@ -306,7 +399,7 @@ export default function RideDetailPage() {
                 </div>
                 <div className="flex justify-between gap-3 border-t border-line pt-3">
                   <dt className="font-semibold text-navy">Total</dt>
-                  <dd className="font-display text-2xl font-bold text-brand">{formatCurrency(fareTotal)}</dd>
+                  <dd className="font-display text-2xl font-bold text-brand-dark">{formatCurrency(fareTotal)}</dd>
                 </div>
               </dl>
               <p className="mt-3 inline-flex items-start gap-1.5 text-xs text-slate">
@@ -320,21 +413,14 @@ export default function RideDetailPage() {
                 </Alert>
               ) : null}
               <div className="mt-4 space-y-2">
-                {!canBook ? (
-                  <Button className="w-full" onClick={goLogin} disabled={!selected.length && !isAuthenticated}>
-                    {selected.length ? 'Log in to lock seats' : 'Log in to hold seats'}
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full"
-                    disabled={!selected.length}
-                    loading={holdMutation.isPending}
-                    onClick={() => holdMutation.mutate(selected)}
-                  >
-                    Continue
-                  </Button>
-                )}
-                <Link to="/search" className="block text-center text-sm font-semibold text-slate hover:text-brand">
+                <Button
+                  className="w-full"
+                  loading={holdMutation.isPending}
+                  onClick={continueBooking}
+                >
+                  {!canBook && selected.length ? 'Log in to lock seats' : 'Continue'}
+                </Button>
+                <Link to="/search" className="block text-center text-sm font-semibold text-slate hover:text-brand-dark">
                   Back to search
                 </Link>
               </div>
@@ -357,22 +443,11 @@ export default function RideDetailPage() {
                   'Select a seat'
                 )}
               </p>
-              <p className="font-display text-lg font-bold text-brand">{formatCurrency(fareTotal)}</p>
+              <p className="font-display text-lg font-bold text-brand-dark">{formatCurrency(fareTotal)}</p>
             </div>
-            {!canBook ? (
-              <Button size="sm" onClick={goLogin}>
-                Log in
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                disabled={!selected.length}
-                loading={holdMutation.isPending}
-                onClick={() => holdMutation.mutate(selected)}
-              >
-                Continue
-              </Button>
-            )}
+            <Button size="sm" loading={holdMutation.isPending} onClick={continueBooking}>
+              Continue
+            </Button>
           </div>
         </div>
       ) : null}

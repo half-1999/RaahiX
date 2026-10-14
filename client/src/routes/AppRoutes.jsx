@@ -42,6 +42,7 @@ export default function AppRoutes() {
         <Route path="rides/:rideId" element={<RideDetailPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="register/:role" element={<RegisterPage />} />
 
         <Route
           path="checkout"

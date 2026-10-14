@@ -4,13 +4,13 @@ import { normalizeVehicleType, VEHICLE_TYPES } from '../../utils/vehicleLayouts'
 
 const statusStyles = {
   AVAILABLE:
-    'border-brand/40 bg-indigo-soft text-navy hover:border-brand hover:bg-brand hover:text-white cursor-pointer',
-  SELECTED: 'border-coral bg-coral text-white cursor-pointer ring-2 ring-coral/30 seat-selected-anim',
+    'border-brand/40 bg-indigo-soft text-navy hover:border-brand hover:bg-brand hover:text-ink cursor-pointer',
+  SELECTED: 'border-gold bg-gold text-ink cursor-pointer ring-2 ring-gold/30 seat-selected-anim',
   HELD: 'border-line bg-mist text-slate cursor-not-allowed opacity-70',
   BOOKED: 'border-line bg-navy/10 text-slate cursor-not-allowed',
   BLOCKED: 'border-line bg-navy/15 text-slate cursor-not-allowed line-through',
   PREMIUM:
-    'border-coral/50 bg-coral-soft text-navy hover:bg-coral hover:text-white cursor-pointer',
+    'border-gold/50 bg-coral-soft text-navy hover:bg-gold hover:text-ink cursor-pointer',
 };
 
 function seatByNumber(seats, number) {
@@ -67,7 +67,7 @@ function CabinSeat({
 
 function DriverSeat() {
   return (
-    <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl border border-navy/30 bg-navy text-[10px] font-bold uppercase tracking-wide text-white/90 md:h-14 md:w-14">
+    <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl border border-line bg-mist text-[10px] font-bold uppercase tracking-wide text-ink md:h-14 md:w-14">
       DRV
     </div>
   );
@@ -116,7 +116,7 @@ export default function SeatMap({
 
     return (
       <div className="mx-auto w-full max-w-md rounded-[1.75rem] border border-line bg-gradient-to-b from-white to-mist/50 p-4 shadow-[var(--shadow-soft)] md:max-w-lg md:p-6">
-        <div className="mb-4 rounded-xl bg-navy px-3 py-2 text-center text-xs font-semibold tracking-[0.18em] text-white/80">
+        <div className="mb-4 rounded-xl border border-line bg-mist px-3 py-2 text-center text-xs font-semibold tracking-[0.18em] text-ink">
           DRIVER
         </div>
         <div className="space-y-3">

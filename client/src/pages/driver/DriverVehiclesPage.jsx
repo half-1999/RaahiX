@@ -103,8 +103,8 @@ export default function DriverVehiclesPage() {
                     Remove photo
                   </button>
                 ) : null}
-                <label className="mt-2 inline-block text-xs font-semibold text-brand">
-                  Upload cab photo
+                <label className="mt-2 inline-block text-xs font-semibold text-brand-dark">
+                  Upload car photo
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"

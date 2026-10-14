@@ -15,7 +15,7 @@ export default function EmptyState({
       )}
     >
       {Icon ? (
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-[var(--shadow-lift)]">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-ink shadow-[var(--shadow-lift)]">
           <Icon className="h-6 w-6" />
         </div>
       ) : null}

@@ -28,14 +28,14 @@ function InfoCard({ title, icon: Icon, actionLabel, onAction, children }) {
     <section className="rounded-2xl border border-line bg-white p-4 shadow-[var(--shadow-soft)] md:p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="inline-flex items-center gap-2 font-display text-lg font-bold text-navy">
-          {Icon ? <Icon className="h-4 w-4 text-brand" /> : null}
+          {Icon ? <Icon className="h-4 w-4 text-brand-dark" /> : null}
           {title}
         </h2>
         {onAction ? (
           <button
             type="button"
             onClick={onAction}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-dark hover:underline"
           >
             <Pencil className="h-3 w-3" />
             {actionLabel || 'Edit'}
@@ -160,7 +160,7 @@ export default function CheckoutPage() {
             ) : null}
           </InfoCard>
 
-          <InfoCard title="Your cab" icon={CarFront}>
+          <InfoCard title="Your car" icon={CarFront}>
             <div className="flex gap-3">
               <img
                 src={rideHeroImage(ride)}
@@ -189,7 +189,12 @@ export default function CheckoutPage() {
                     <span className="font-semibold text-navy">
                       {s} · {meta.label}
                     </span>
-                    <span className="text-slate">{formatCurrency(normalized.amountPerSeat)}</span>
+                    <span className="text-slate">
+                      {formatCurrency(
+                        (normalized.seatFares || []).find((fare) => fare.seatNumber === s)?.amount ??
+                          normalized.amountPerSeat
+                      )}
+                    </span>
                   </li>
                 );
               })}
@@ -249,7 +254,7 @@ export default function CheckoutPage() {
           </section>
           <Link
             to={`/booking/${entityId(normalized)}`}
-            className="block text-center text-sm font-semibold text-slate hover:text-brand"
+            className="block text-center text-sm font-semibold text-slate hover:text-brand-dark"
           >
             View booking draft
           </Link>

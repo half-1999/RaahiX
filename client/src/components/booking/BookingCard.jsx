@@ -35,7 +35,7 @@ export default function BookingCard({ booking: raw }) {
       </div>
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
         <span className="text-slate">Seats: {seats.join(', ') || '—'}</span>
-        <span className="font-display text-lg font-bold text-brand">
+        <span className="font-display text-lg font-bold text-brand-dark">
           {formatCurrency(booking.totalAmount)}
         </span>
       </div>

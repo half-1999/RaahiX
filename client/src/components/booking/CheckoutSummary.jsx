@@ -39,12 +39,12 @@ export default function CheckoutSummary({ booking, ride }) {
         )}
         <div className="flex justify-between gap-4 border-t border-line pt-3">
           <dt className="text-base font-semibold text-navy">Total</dt>
-          <dd className="font-display text-3xl font-bold text-brand">{formatCurrency(amount)}</dd>
+          <dd className="font-display text-3xl font-bold text-brand-dark">{formatCurrency(amount)}</dd>
         </div>
       </dl>
       <div className="mt-4 space-y-2 rounded-xl bg-mist/80 p-3 text-xs text-slate">
         <p className="inline-flex items-center gap-1.5 font-semibold text-navy">
-          <ShieldCheck className="h-3.5 w-3.5 text-brand" />
+          <ShieldCheck className="h-3.5 w-3.5 text-brand-dark" />
           Secure payment
         </p>
         <p>Cancellation and refunds follow the corridor policy on your ticket.</p>

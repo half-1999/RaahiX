@@ -38,11 +38,12 @@ export default function DownloadAppButton() {
         className="max-[360px]:!px-2 shrink-0 whitespace-nowrap"
         loading={busy}
         onClick={onDownload}
+        aria-label="Download App"
         aria-haspopup={installState.canPrompt ? undefined : 'dialog'}
         data-download-app
       >
         <Download className="h-4 w-4" aria-hidden="true" />
-        Download App
+        <span className="hidden sm:inline">Download App</span>
       </Button>
       {createPortal(
         <Modal

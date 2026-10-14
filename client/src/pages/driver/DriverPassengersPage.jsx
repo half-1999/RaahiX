@@ -57,7 +57,7 @@ export default function DriverPassengersPage() {
               key: 'phone',
               header: 'Phone',
               render: (row) => (
-                <a className="text-brand underline" href={`tel:${row.phone}`}>
+                <a className="text-brand-dark underline" href={`tel:${row.phone}`}>
                   {row.phone}
                 </a>
               ),

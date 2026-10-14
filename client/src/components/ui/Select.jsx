@@ -20,7 +20,7 @@ export default function Select({
       <select
         id={selectId}
         className={cn(
-          'h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-black outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-surface-2 disabled:text-black/60',
+          'h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand/30 disabled:bg-surface-2 disabled:text-slate',
           error && 'border-danger focus:border-danger focus:ring-danger/20',
           className
         )}

@@ -124,11 +124,29 @@ async function requireDriver(userId) {
   return driver;
 }
 
+function routeKey(route) {
+  return [
+    String(route.createdByDriverId || 'shared'),
+    String(route.origin?.locationId || route.origin?.city || ''),
+    ...(route.stops || []).map((stop) => String(stop.locationId || stop.city || '')),
+    String(route.destination?.locationId || route.destination?.city || ''),
+    String(route.estimatedDuration || ''),
+  ].join('>');
+}
+
 export async function listActiveRoutes() {
   const routes = await Route.find({ status: ROUTE_STATUS.ACTIVE })
-    .select('origin destination estimatedDuration')
-    .sort({ 'origin.city': 1, 'destination.city': 1 });
-  return { routes };
+    .select('origin destination stops estimatedDuration createdByDriverId')
+    .sort({ 'origin.city': 1, 'destination.city': 1, createdAt: 1 });
+  const seen = new Set();
+  const unique = [];
+  for (const route of routes) {
+    const key = routeKey(route);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(route);
+  }
+  return { routes: unique };
 }
 
 export async function listOwnRoutes(userId) {
@@ -162,6 +180,18 @@ export async function createOwnRoute(userId, payload, actor) {
   const [origin, ...rest] = places;
   const destination = rest.pop();
   const stops = rest.map((place, index) => ({ ...place, sequence: index + 1 }));
+
+  const existing = await Route.find({ createdByDriverId: driver._id, status: ROUTE_STATUS.ACTIVE });
+  const signature = [String(origin.locationId), ...stops.map((stop) => String(stop.locationId)), String(destination.locationId)].join('>');
+  const duplicate = existing.find((route) => {
+    const current = [
+      String(route.origin?.locationId),
+      ...(route.stops || []).map((stop) => String(stop.locationId)),
+      String(route.destination?.locationId),
+    ].join('>');
+    return current === signature;
+  });
+  if (duplicate) return duplicate;
 
   return createRoute(
     {

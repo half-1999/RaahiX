@@ -36,7 +36,7 @@ export default function PaymentProofPreview({ bookingId, status }) {
       {open && url ? (
         <button
           type="button"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-navy/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
           onClick={() => setOpen(false)}
           aria-label="Close payment screenshot"
         >

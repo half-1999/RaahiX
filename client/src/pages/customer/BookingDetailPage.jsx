@@ -74,7 +74,7 @@ export default function BookingDetailPage() {
           <h1 className="mt-1 font-display text-3xl font-bold text-navy">
             {booking.bookingNumber || 'Booking'}
           </h1>
-          <p className="mt-1 text-sm text-slate">Ticket, cab, driver, seats, and refund</p>
+          <p className="mt-1 text-sm text-slate">Ticket, car, driver, seats, and refund</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <StatusBadge status={booking.bookingStatus} type="booking" />
@@ -86,10 +86,10 @@ export default function BookingDetailPage() {
       {error ? <Alert tone="error" className="print-hide mb-4">{error}</Alert> : null}
 
       <article className="ticket-sheet mb-4 overflow-hidden rounded-2xl border border-line bg-white">
-        <div className="bg-navy px-5 py-4 text-white">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">RaahiX · Scheduled intercity shared rides</p>
+        <div className="border-b border-line bg-ivory px-5 py-4 text-ink">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate">RaahiX · Scheduled intercity shared rides</p>
           <p className="font-display text-2xl font-bold">{booking.bookingNumber}</p>
-          <p className="text-sm text-white/80">
+          <p className="text-sm text-slate">
             {cityLabel(ride?.route?.origin || ride?.origin)} → {cityLabel(ride?.route?.destination || ride?.destination)}
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function BookingDetailPage() {
             <p className="text-sm text-slate">Pickup {ride?.pickupPoint || 'As published'}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate">Cab</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate">Car</p>
             <p className="font-bold text-navy">{cabDisplayName(ride)}</p>
             <p className="text-sm text-slate">{vehicleTypeLabel(vehicle?.vehicleType)}</p>
             <p className="text-sm text-slate">{vehicle?.registrationNumber || 'Registration on file'}</p>
@@ -114,7 +114,7 @@ export default function BookingDetailPage() {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate">Fare and refund</p>
-            <p className="font-display text-2xl font-bold text-brand">{formatCurrency(booking.totalAmount)}</p>
+            <p className="font-display text-2xl font-bold text-brand-dark">{formatCurrency(booking.totalAmount)}</p>
             <p className="text-sm text-slate">
               Refund {booking.refundStatus || 'NOT_APPLICABLE'}
               {booking.refundAmount ? ` · ${formatCurrency(booking.refundAmount)}` : ''}
@@ -169,7 +169,7 @@ export default function BookingDetailPage() {
         <section className="rounded-2xl border border-line bg-white p-5 shadow-[var(--shadow-soft)]">
           <div className="flex items-center justify-between gap-2">
             <h2 className="inline-flex items-center gap-2 font-display text-lg font-bold text-navy">
-              <Armchair className="h-4 w-4 text-brand" />
+              <Armchair className="h-4 w-4 text-brand-dark" />
               Passengers &amp; seats
             </h2>
           </div>
@@ -190,7 +190,7 @@ export default function BookingDetailPage() {
           </ul>
           <p className="mt-3 text-sm">
             Total paid / due:{' '}
-            <span className="font-display text-2xl font-bold text-brand">
+            <span className="font-display text-2xl font-bold text-brand-dark">
               {formatCurrency(booking.totalAmount)}
             </span>
           </p>
