@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { CalendarDays, Car, CreditCard, LayoutDashboard, Route, RotateCcw } from 'lucide-react';
 import Logo from '../brand/Logo';
+import ThemeToggle from '../brand/ThemeToggle';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 
@@ -26,13 +27,16 @@ export default function DriverLayout() {
             </Link>
             <p className="text-xs text-ink-muted">{user?.name}</p>
           </div>
-          <button
-            type="button"
-            className="text-sm text-ink-muted hover:text-ink"
-            onClick={() => logout()}
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="text-sm text-ink-muted hover:text-ink"
+              onClick={() => logout()}
+            >
+              Log out
+            </button>
+          </div>
         </div>
       </header>
 

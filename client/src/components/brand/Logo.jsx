@@ -1,4 +1,5 @@
 import { cn } from '../../utils/cn';
+import { useTheme } from '../../context/ThemeContext';
 
 const heights = {
   sm: 'h-14',
@@ -6,10 +7,14 @@ const heights = {
   lg: 'h-20',
 };
 
+const LIGHT_LOGO = '/brand/raahix-lockup.png';
+const DARK_LOGO = '/brand/RaahiX%20Roadway%20Logo%20Branding.png';
+
 export default function Logo({ className, size = 'md' }) {
+  const { isDark } = useTheme();
   return (
     <img
-      src="/brand/raahix-lockup.png"
+      src={isDark ? DARK_LOGO : LIGHT_LOGO}
       alt="RaahiX"
       width={2172}
       height={724}

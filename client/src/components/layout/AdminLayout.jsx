@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import Logo from '../brand/Logo';
+import ThemeToggle from '../brand/ThemeToggle';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 
@@ -84,6 +85,7 @@ export default function AdminLayout() {
               </p>
             </div>
             <div className="flex items-center gap-3 text-sm">
+              <ThemeToggle />
               <Link to="/" className="text-ink-muted hover:text-ink">
                 Site
               </Link>

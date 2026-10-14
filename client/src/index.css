@@ -48,6 +48,66 @@ body,
   min-height: 100%;
 }
 
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-navy: #f7f7f5;
+  --color-ash: #a6a8ae;
+  --color-charcoal: #f7f7f5;
+  --color-panel: #191b1f;
+  --color-indigo-soft: #2a2618;
+  --color-coral-soft: #2a2618;
+  --color-ivory: #191b1f;
+  --color-mist: #22252a;
+  --color-slate: #a6a8ae;
+  --color-line: #303238;
+  --color-ink: #f7f7f5;
+  --color-ink-muted: #a6a8ae;
+  --color-surface: #111214;
+  --color-surface-2: #191b1f;
+  --color-brand-dark: #e5ac32;
+  --color-brand-soft: #2a2618;
+}
+
+html[data-theme='dark'] .bg-white {
+  background-color: #191b1f;
+}
+
+html[data-theme='dark'] button.rx-btn-outline {
+  background-color: #22252a;
+  color: #f7f7f5;
+  border-color: #303238;
+}
+
+html[data-theme='dark'] button.rx-btn-outline:hover:not(:disabled) {
+  background-color: #2a2d33;
+  border-color: #e5ac32;
+}
+
+html[data-theme='dark'] button.rx-btn-secondary,
+html[data-theme='dark'] button.rx-btn-ghost {
+  color: #f7f7f5;
+}
+
+html[data-theme='dark'] button.rx-btn-secondary {
+  background-color: #22252a;
+  border-color: #303238;
+}
+
+html[data-theme='dark'] button.rx-btn-ghost:hover:not(:disabled),
+html[data-theme='dark'] button.rx-btn-secondary:hover:not(:disabled) {
+  background-color: #2a2d33;
+}
+
+html[data-theme='dark'] button.rx-btn:disabled {
+  background-color: #22252a;
+  color: #a6a8ae;
+  border-color: #303238;
+}
+
+html[data-theme='dark'] .rx-loader {
+  background: #303238;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

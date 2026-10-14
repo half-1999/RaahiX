@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import Logo from '../brand/Logo';
+import ThemeToggle from '../brand/ThemeToggle';
 import DownloadAppButton from '../pwa/DownloadAppButton';
 import { cn } from '../../utils/cn';
 
@@ -86,6 +87,7 @@ export default function PublicLayout() {
               <Link to="/search">
                 <Button size="sm">Find a ride</Button>
               </Link>
+              <ThemeToggle />
             </div>
             {showDownload ? <DownloadAppButton /> : null}
             <button
@@ -103,6 +105,7 @@ export default function PublicLayout() {
         {open ? (
           <div id="mobile-nav" className="border-t border-line bg-white px-4 py-4 lg:hidden">
             <div className="flex flex-col gap-3">
+              <ThemeToggle className="w-full lg:hidden" />
               <Link to="/search" onClick={close}>
                 <Button className="w-full">Find a ride</Button>
               </Link>
