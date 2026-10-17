@@ -59,7 +59,11 @@
     <script>
       if (document.documentElement.dataset.theme === 'dark') {
         var mark = document.querySelector('#root img');
-        if (mark) mark.src = '/brand/RaahiX%20Roadway%20Logo%20Branding.png';
+        if (mark) {
+          mark.src = '/brand/raahix-lockup-dark.png';
+          mark.width = 2172;
+          mark.height = 724;
+        }
       }
     </script>
     <script type="module" src="/src/main.jsx"></script>

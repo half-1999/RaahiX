@@ -6,7 +6,7 @@ Shehar Se Shehar, Saath Safar. A product by The Stack Guy.
 
 ## Brand
 
-The light theme uses `client/public/brand/raahix-lockup.png`. The dark theme uses `client/public/brand/RaahiX Roadway Logo Branding.png`. Do not redraw either file, crop it, or substitute another mark.
+The light theme uses `client/public/brand/raahix-lockup.png` (charcoal mark on light). The dark theme uses `client/public/brand/raahix-lockup-dark.png` (white Roadway lockup on dark). Do not redraw either file, crop it, or substitute another mark.
 
 The product opens in the light theme. Pages, cards, navigation, and dashboards use white and warm off-white until the visitor chooses Dark. Gold is the action color. Text on gold is charcoal, because white on gold is hard to read.
 

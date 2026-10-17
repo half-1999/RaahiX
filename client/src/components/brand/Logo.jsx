@@ -8,7 +8,7 @@ const heights = {
 };
 
 const LIGHT_LOGO = '/brand/raahix-lockup.png';
-const DARK_LOGO = '/brand/RaahiX%20Roadway%20Logo%20Branding.png';
+const DARK_LOGO = '/brand/raahix-lockup-dark.png?v=3';
 
 export default function Logo({ className, size = 'md' }) {
   const { isDark } = useTheme();
