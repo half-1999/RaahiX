@@ -115,9 +115,13 @@ const rideSchema = new mongoose.Schema(
       default: RIDE_STATUS.SCHEDULED,
     },
     isSeed: { type: Boolean, default: false },
+    /** Demonstration inventory — not live marketplace inventory. */
+    isDemo: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+rideSchema.index({ isDemo: 1, status: 1, departureTime: 1 });
 
 rideSchema.index({ date: 1, status: 1 });
 rideSchema.index({ routeId: 1, date: 1, status: 1 });

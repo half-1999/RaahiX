@@ -22,6 +22,7 @@ import { requireReason, writeAudit } from './auditService.js';
 import { isForwardCitySegment, legsFromStops, orderedStops, remainingForCities, stopsFromRoute } from './segmentService.js';
 import { releaseHold, releaseBookedSeats, recountAvailableSeats } from './seatService.js';
 import { normalizeVehicleType, VEHICLE_TYPES } from '../utils/vehicleLayouts.js';
+import { rankDemoRides, rankRides } from './rideRankingService.js';
 
 function initSeatsFromVehicle(vehicle) {
   return vehicle.seatConfiguration.map((cfg) => ({
@@ -116,6 +117,9 @@ function toRideSummary(ride) {
     availableSeats: ride.availableSeats,
     totalSeats: ride.totalSeats,
     status: ride.status,
+    isDemo: Boolean(ride.isDemo || ride.isSeed),
+    isSeed: Boolean(ride.isSeed),
+    bookable: ride.isDemo || ride.isSeed ? Boolean(config.demo?.allowBooking) : true,
     route: route
       ? {
           id: route._id?.toString?.() || route.toString(),
@@ -142,7 +146,9 @@ function toRideSummary(ride) {
     driver:
       ride.driverId && typeof ride.driverId === 'object'
         ? {
+            name: ride.driverId.name || null,
             rating: ride.driverId.rating,
+            isDemo: Boolean(ride.driverId.isDemo || ride.isDemo || ride.isSeed),
           }
         : undefined,
   };
@@ -356,7 +362,206 @@ export async function cancelRide(rideId, actor, reason) {
   return Ride.findById(rideId);
 }
 
-export async function search({ originCity, destinationCity, date, passengers = 1 }) {
+async function loadUpcomingRides({ from, to, limit = 80 }) {
+  return Ride.find({
+    status: { $in: BOOKABLE_RIDE_STATUSES },
+    voidedAt: null,
+    departureTime: { $gt: from, ...(to ? { $lte: to } : {}) },
+  })
+    .populate('routeId')
+    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber images')
+    .populate('driverId', 'name phone rating isDemo isSeed')
+    .sort({ departureTime: 1 })
+    .limit(limit)
+    .lean();
+}
+
+async function attachRatings(rides) {
+  const vehicleIds = [...new Set(rides.map((ride) => ride.vehicleId?._id).filter(Boolean))];
+  if (!vehicleIds.length) return new Map();
+  const ratingRows = await Review.aggregate([
+    { $match: { vehicleId: { $in: vehicleIds } } },
+    { $group: { _id: '$vehicleId', average: { $avg: '$rating' }, count: { $sum: 1 } } },
+  ]);
+  return new Map(
+    ratingRows.map((row) => [String(row._id), { average: Math.round(row.average * 10) / 10, count: row.count }])
+  );
+}
+
+function summarizeSearchRide(ride, { originCity, destinationCity, pax, ratingByVehicle, fallback = null }) {
+  const stops = orderedStops(ride);
+  const routeOk = isForwardCitySegment(stops, originCity, destinationCity);
+  const open = routeOk
+    ? remainingForCities(ride, originCity, destinationCity)
+    : Number(ride.availableSeats) || 0;
+  const occupied = Math.max(0, (ride.totalSeats || 0) - open);
+  const stats = ratingByVehicle.get(String(ride.vehicleId?._id));
+  const summary = {
+    ...toRideSummary(ride),
+    segmentSeats: open,
+    occupiedSeats: occupied,
+    fullyBooked: open < pax,
+    rating: stats?.average ?? null,
+    reviewCount: stats?.count || 0,
+    exactRouteMatch: routeOk,
+  };
+  if (fallback) {
+    summary.isFallback = true;
+    summary.fallbackReason = fallback.reason;
+    summary.matchNote = fallback.note;
+  }
+  return summary;
+}
+
+/**
+ * Guarantee UX: if exact day/route has nothing bookable, widen the window and
+ * always return at least one upcoming ride when inventory exists.
+ */
+async function findFallbackRides({
+  originCity,
+  destinationCity,
+  date,
+  pax,
+  excludeIds,
+  requestedDate,
+}) {
+  const now = new Date();
+  const dayStart = startOfDay(date);
+  const windowEnd = new Date(dayStart);
+  windowEnd.setUTCDate(windowEnd.getUTCDate() + 7);
+  windowEnd.setUTCHours(23, 59, 59, 999);
+
+  const candidates = await loadUpcomingRides({ from: now, to: windowEnd, limit: 120 });
+  const ratingByVehicle = await attachRatings(candidates);
+  const excluded = new Set([...excludeIds].map(String));
+
+  const openEnough = (ride, origin, destination) => {
+    const stops = orderedStops(ride);
+    if (!isForwardCitySegment(stops, origin, destination)) return false;
+    return remainingForCities(ride, origin, destination) >= pax;
+  };
+
+  // 1) Same corridor, nearby dates (±7 days from requested day start, already filtered upcoming)
+  const nearbyDate = candidates.filter(
+    (r) => !excluded.has(String(r._id)) && openEnough(r, originCity, destinationCity)
+  );
+  if (nearbyDate.length) {
+    return nearbyDate.slice(0, 6).map((ride) =>
+      summarizeSearchRide(ride, {
+        originCity,
+        destinationCity,
+        pax,
+        ratingByVehicle,
+        fallback: {
+          reason: 'nearby_date',
+          note: 'No seats on your exact date — showing the closest departures on this route.',
+        },
+      })
+    );
+  }
+
+  // 2) Reverse corridor
+  const reverse = candidates.filter(
+    (r) => !excluded.has(String(r._id)) && openEnough(r, destinationCity, originCity)
+  );
+  if (reverse.length) {
+    return reverse.slice(0, 4).map((ride) =>
+      summarizeSearchRide(ride, {
+        originCity: destinationCity,
+        destinationCity: originCity,
+        pax,
+        ratingByVehicle,
+        fallback: {
+          reason: 'reverse_route',
+          note: `No seats ${originCity} → ${destinationCity}. Showing the reverse route instead.`,
+        },
+      })
+    );
+  }
+
+  // 3) Same origin, any destination with seats
+  const sameOrigin = candidates.filter((r) => {
+    if (excluded.has(String(r._id))) return false;
+    const stops = orderedStops(r);
+    const from = stops[0]?.city;
+    if (!from) return false;
+    const open = Number(r.availableSeats) || 0;
+    return (
+      from.toLowerCase() === String(originCity).toLowerCase() &&
+      open >= pax &&
+      !isForwardCitySegment(stops, originCity, destinationCity)
+    );
+  });
+  if (sameOrigin.length) {
+    return sameOrigin.slice(0, 4).map((ride) => {
+      const dest = orderedStops(ride).at(-1)?.city || destinationCity;
+      return summarizeSearchRide(ride, {
+        originCity,
+        destinationCity: dest,
+        pax,
+        ratingByVehicle,
+        fallback: {
+          reason: 'same_origin',
+          note: `No seats to ${destinationCity} yet — here are rides leaving from ${originCity}.`,
+        },
+      });
+    });
+  }
+
+  // 4) Absolute guarantee: nearest upcoming ride with any seats (demo labeled)
+  const anyOpen = candidates.find((r) => !excluded.has(String(r._id)) && (Number(r.availableSeats) || 0) >= 1);
+  if (anyOpen) {
+    const stops = orderedStops(anyOpen);
+    const from = stops[0]?.city || originCity;
+    const to = stops.at(-1)?.city || destinationCity;
+    return [
+      summarizeSearchRide(anyOpen, {
+        originCity: from,
+        destinationCity: to,
+        pax: 1,
+        ratingByVehicle,
+        fallback: {
+          reason: 'suggested_corridor',
+          note: `Nothing matched ${originCity} → ${destinationCity} on ${requestedDate}. Here is the next available sample ride.`,
+        },
+      }),
+    ];
+  }
+
+  // 5) Last resort: show a fully booked matching/nearby ride so the page is never blank
+  const anyRide = candidates.find((r) => !excluded.has(String(r._id)));
+  if (anyRide) {
+    const stops = orderedStops(anyRide);
+    const from = stops[0]?.city || originCity;
+    const to = stops.at(-1)?.city || destinationCity;
+    return [
+      {
+        ...summarizeSearchRide(anyRide, {
+          originCity: from,
+          destinationCity: to,
+          pax,
+          ratingByVehicle,
+          fallback: {
+            reason: 'reference_full',
+            note: 'No open seats found nearby — showing a reference ride (currently full).',
+          },
+        }),
+        fullyBooked: true,
+        bookable: false,
+      },
+    ];
+  }
+
+  return [];
+}
+
+export async function search({
+  originCity,
+  destinationCity,
+  date,
+  passengers = 1,
+  sort = 'recommended',
+}) {
   if (!originCity || !destinationCity || !date) {
     throw new AppError('originCity, destinationCity and date are required', {
       code: ErrorCodes.VALIDATION_ERROR,
@@ -368,42 +573,123 @@ export async function search({ originCity, destinationCity, date, passengers = 1
   const now = new Date();
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
-  const rides = await Ride.find({
-    status: { $in: BOOKABLE_RIDE_STATUSES },
-    voidedAt: null,
-    departureTime: { $gt: now, $gte: dayStart, $lte: dayEnd },
-  })
-    .populate('routeId')
-    .populate('vehicleId', 'vehicleType make model capacity features registrationNumber images')
-    .populate('driverId', 'name phone rating')
-    .sort({ departureTime: 1 })
-    .lean();
+  const rides = await loadUpcomingRides({ from: now > dayStart ? now : dayStart, to: dayEnd, limit: 100 });
 
-  const matched = rides.filter((ride) => {
-    if (!isForwardCitySegment(orderedStops(ride), originCity, destinationCity)) return false;
-    const open = remainingForCities(ride, originCity, destinationCity);
-    return open >= pax;
-  });
-  const vehicleIds = [...new Set(matched.map((ride) => ride.vehicleId?._id).filter(Boolean))];
-  const ratingRows = vehicleIds.length
-    ? await Review.aggregate([
-        { $match: { vehicleId: { $in: vehicleIds } } },
-        { $group: { _id: '$vehicleId', average: { $avg: '$rating' }, count: { $sum: 1 } } },
-      ])
-    : [];
-  const ratingByVehicle = new Map(
-    ratingRows.map((row) => [String(row._id), { average: Math.round(row.average * 10) / 10, count: row.count }])
+  const routeMatched = rides.filter((ride) =>
+    isForwardCitySegment(orderedStops(ride), originCity, destinationCity)
   );
+  const ratingByVehicle = await attachRatings(routeMatched);
+
+  const summarized = routeMatched.map((ride) =>
+    summarizeSearchRide(ride, { originCity, destinationCity, pax, ratingByVehicle })
+  );
+
+  const genuineAvailable = summarized.filter((r) => !r.isDemo && !r.fullyBooked);
+  const genuineFull = summarized.filter((r) => !r.isDemo && r.fullyBooked);
+  const demoPool = summarized.filter((r) => r.isDemo);
+
+  const weights = config.ranking;
+  const rankCtx = { requestedDate: date, passengers: pax, sortMode: sort, weights };
+
+  const availableGenuine = rankRides(genuineAvailable, rankCtx);
+  const rankedDemoOpen = rankDemoRides(
+    demoPool.filter((r) => !r.fullyBooked),
+    rankCtx
+  ).map((r) => ({
+    ...r,
+    bookable: Boolean(config.demo?.allowBooking),
+  }));
+  const rankedDemoFull = rankDemoRides(
+    demoPool.filter((r) => r.fullyBooked),
+    { ...rankCtx, sortMode: 'departure' }
+  );
+
+  const showingDemoAsPrimary = availableGenuine.length === 0 && rankedDemoOpen.length > 0;
+  let available = showingDemoAsPrimary ? rankedDemoOpen : availableGenuine;
+  let demo = showingDemoAsPrimary ? rankedDemoOpen : [];
+  let fullyBooked = [
+    ...rankRides(genuineFull, { ...rankCtx, sortMode: 'departure' }),
+    ...rankedDemoFull,
+  ].map((r) => ({ ...r, bookable: false, fullyBooked: true }));
+
+  let guaranteedFallback = false;
+  let fallbackReason = null;
+
+  if (!available.length) {
+    const fallbacks = await findFallbackRides({
+      originCity,
+      destinationCity,
+      date,
+      pax,
+      excludeIds: [...summarized, ...fullyBooked].map((r) => r.id),
+      requestedDate: date,
+    });
+    if (fallbacks.length) {
+      guaranteedFallback = true;
+      fallbackReason = fallbacks[0].fallbackReason || 'suggested_corridor';
+      const openFallbacks = fallbacks.filter((r) => !r.fullyBooked);
+      const fullFallbacks = fallbacks.filter((r) => r.fullyBooked);
+      if (openFallbacks.length) {
+        available = rankDemoRides(openFallbacks, rankCtx).map((r) => ({
+          ...r,
+          bookable: r.isDemo ? Boolean(config.demo?.allowBooking) : r.bookable !== false,
+          isFallback: true,
+        }));
+        demo = available.filter((r) => r.isDemo);
+      }
+      if (fullFallbacks.length && !fullyBooked.length) {
+        fullyBooked = fullFallbacks.map((r) => ({ ...r, bookable: false, fullyBooked: true }));
+      }
+      // Absolute UX guarantee: if only full fallbacks, still put one card in available list as reference
+      if (!available.length && fullyBooked.length) {
+        available = [{ ...fullyBooked[0], isFallback: true }];
+      }
+    }
+  }
+
+  const suggestions = [];
+  if (!available.length && !fullyBooked.length) {
+    suggestions.push('try_another_time', 'try_tomorrow', 'try_reverse_route');
+  } else if (guaranteedFallback) {
+    suggestions.push('nearby_alternatives', 'try_tomorrow', 'try_reverse_route');
+  } else if (showingDemoAsPrimary) {
+    suggestions.push('explore_demo_rides', 'try_tomorrow');
+  }
+
   return {
-    rides: matched.map((ride) => {
-      const stats = ratingByVehicle.get(String(ride.vehicleId?._id));
-      return {
-        ...toRideSummary(ride),
-        segmentSeats: remainingForCities(ride, originCity, destinationCity),
-        rating: stats?.average ?? null,
-        reviewCount: stats?.count || 0,
-      };
-    }),
+    rides: available,
+    available,
+    fullyBooked,
+    demo,
+    meta: {
+      originCity,
+      destinationCity,
+      date,
+      passengers: pax,
+      sort,
+      inventoryKind: availableGenuine.length
+        ? 'genuine'
+        : guaranteedFallback
+          ? 'fallback'
+          : showingDemoAsPrimary
+            ? 'demo'
+            : fullyBooked.length
+              ? 'full_only'
+              : 'empty',
+      guaranteedFallback,
+      fallbackReason,
+      fallbackNote: available[0]?.matchNote || null,
+      counts: {
+        available: available.length,
+        fullyBooked: fullyBooked.length,
+        demo: demo.length,
+        genuineAvailable: genuineAvailable.length,
+      },
+      suggestions,
+      demoNote:
+        'Demonstration rides use fictional demo drivers and are not live marketplace offers.',
+      allowDemoBooking: Boolean(config.demo?.allowBooking),
+    },
   };
 }
 

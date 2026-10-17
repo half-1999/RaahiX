@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService';
 import {
+  SESSION_CLEARED_EVENT,
   clearSession,
   getAccessToken,
   getStoredUser,
@@ -8,6 +9,14 @@ import {
 } from '../store/authStore';
 
 const AuthContext = createContext(null);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientNetwork(err) {
+  return !err?.response && (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error');
+}
 
 function unwrapUser(payload) {
   if (!payload) return null;
@@ -44,30 +53,47 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return null;
     }
-    try {
-      const me = await authService.me();
-      const nextUser = unwrapUser(me);
-      setSession({ user: nextUser });
-      setUser(nextUser);
-      return nextUser;
-    } catch (err) {
-      // Keep local session on network / 5xx so users are not forced to re-login.
-      if (isAuthFailure(err)) {
-        clearSession();
-        setUser(null);
-        return null;
+
+    const attempts = 4;
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        const me = await authService.me();
+        const nextUser = unwrapUser(me);
+        setSession({ user: nextUser });
+        setUser(nextUser);
+        setLoading(false);
+        return nextUser;
+      } catch (err) {
+        if (isAuthFailure(err)) {
+          clearSession();
+          setUser(null);
+          setLoading(false);
+          return null;
+        }
+        // API often boots a beat after Vite — retry briefly instead of logging noise/false sessions.
+        if (isTransientNetwork(err) && i < attempts - 1) {
+          await sleep(400 * (i + 1));
+          continue;
+        }
+        const cached = unwrapUser(getStoredUser());
+        if (cached) setUser(cached);
+        setLoading(false);
+        return cached;
       }
-      const cached = unwrapUser(getStoredUser());
-      if (cached) setUser(cached);
-      return cached;
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
+    return null;
   }, []);
 
   useEffect(() => {
     refreshMe();
   }, [refreshMe]);
+
+  useEffect(() => {
+    const onCleared = () => setUser(null);
+    window.addEventListener(SESSION_CLEARED_EVENT, onCleared);
+    return () => window.removeEventListener(SESSION_CLEARED_EVENT, onCleared);
+  }, []);
 
   const login = useCallback(
     async (payload) => {

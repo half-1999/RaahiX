@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearSession } from '../store/authStore';
 
 const PRODUCTION_API_URL = 'https://raahix.onrender.com/api';
 
@@ -27,13 +28,22 @@ api.interceptors.request.use((config) => {
 
 let refreshing = null;
 
+function isNetworkError(error) {
+  return !error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error');
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
+    // Don't attempt refresh while the API is still booting / unreachable.
+    if (isNetworkError(error)) {
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401 && !original._retry) {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
+        clearSession();
         return Promise.reject(error);
       }
       original._retry = true;
@@ -49,11 +59,9 @@ api.interceptors.response.use(
         return api(original);
       } catch (refreshError) {
         refreshing = null;
-        // Only wipe session when refresh is definitely unauthorized.
+        // Only wipe session when refresh is definitely unauthorized (e.g. after reseed).
         if (refreshError?.response?.status === 401 || refreshError?.response?.status === 403) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
+          clearSession();
         }
         return Promise.reject(refreshError);
       }

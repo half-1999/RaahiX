@@ -121,12 +121,22 @@ export async function runSeed({ disconnect = true, connect = true, force = false
     emailVerified: true,
   });
 
+  // Exactly 10 fictional demo drivers (not real people). Contact numbers are reserved test ranges.
   const driverSpecs = [
-    { name: 'Raj Kumar', phone: '9000001001', email: 'raj.driver@localcab.dev', license: 'DL-07-2024001', username: 'rajkumar' },
-    { name: 'Amit Singh', phone: '9000001002', email: 'amit.driver@localcab.dev', license: 'UP-25-2024002', username: 'amitsingh' },
+    { name: 'Aarav Sharma', phone: '9000001001', email: 'aarav.driver@localcab.dev', license: 'DL-07-DEMO001', username: 'aaravsharma', city: 'Delhi', state: 'Delhi', make: 'Maruti', model: 'Swift', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'DL01DM1001', routes: [0, 1] },
+    { name: 'Neha Verma', phone: '9000001002', email: 'neha.driver@localcab.dev', license: 'RJ-14-DEMO002', username: 'nehaverma', city: 'Jaipur', state: 'Rajasthan', make: 'Honda', model: 'City', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'RJ14DM2002', routes: [2, 3] },
+    { name: 'Arjun Singh', phone: '9000001003', email: 'arjun.driver@localcab.dev', license: 'CH-01-DEMO003', username: 'arjunsingh', city: 'Chandigarh', state: 'Chandigarh', make: 'Hyundai', model: 'Verna', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'CH01DM3003', routes: [0, 1] },
+    { name: 'Priya Patel', phone: '9000001004', email: 'priya.driver@localcab.dev', license: 'MH-12-DEMO004', username: 'priyapatel', city: 'Mumbai', state: 'Maharashtra', make: 'Tata', model: 'Tiago', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'MH12DM4004', routes: [9, 10] },
+    { name: 'Rahul Kumar', phone: '9000001005', email: 'rahul.driver@localcab.dev', license: 'UP-32-DEMO005', username: 'rahulkumar', city: 'Lucknow', state: 'Uttar Pradesh', make: 'Maruti', model: 'Dzire', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'UP32DM5005', routes: [13] },
+    { name: 'Ananya Reddy', phone: '9000001006', email: 'ananya.driver@localcab.dev', license: 'TS-09-DEMO006', username: 'ananyareddy', city: 'Hyderabad', state: 'Telangana', make: 'Honda', model: 'Amaze', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'TS09DM6006', routes: [11] },
+    { name: 'Vikram Mehta', phone: '9000001007', email: 'vikram.driver@localcab.dev', license: 'UK-07-DEMO007', username: 'vikrammehta', city: 'Dehradun', state: 'Uttarakhand', make: 'Mahindra', model: 'XUV700', type: VEHICLE_TYPES.SIX_SEATER, reg: 'UK07DM7007', routes: [6, 7] },
+    { name: 'Kavya Nair', phone: '9000001008', email: 'kavya.driver@localcab.dev', license: 'KA-05-DEMO008', username: 'kavyanair', city: 'Bengaluru', state: 'Karnataka', make: 'Hyundai', model: 'i20', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'KA05DM8008', routes: [12, 14] },
+    { name: 'Rohit Yadav', phone: '9000001009', email: 'rohit.driver@localcab.dev', license: 'UP-80-DEMO009', username: 'rohityadav', city: 'Agra', state: 'Uttar Pradesh', make: 'Toyota', model: 'Glanza', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'UP80DM9009', routes: [4, 5] },
+    { name: 'Ishita Das', phone: '9000001010', email: 'ishita.driver@localcab.dev', license: 'TN-09-DEMO010', username: 'ishitadas', city: 'Chennai', state: 'Tamil Nadu', make: 'Maruti', model: 'Ciaz', type: VEHICLE_TYPES.FIVE_SEATER, reg: 'TN09DM1010', routes: [15] },
   ];
 
   const drivers = [];
+  const vehicles = [];
   for (const spec of driverSpecs) {
     const user = await User.create({
       name: spec.name,
@@ -137,51 +147,32 @@ export async function runSeed({ disconnect = true, connect = true, force = false
       role: ROLES.DRIVER,
       status: USER_STATUS.ACTIVE,
       emailVerified: true,
-      city: 'Delhi',
-      state: 'Delhi',
+      city: spec.city,
+      state: spec.state,
     });
-    drivers.push(
-      await Driver.create({
-        userId: user._id,
-        name: spec.name,
-        phone: spec.phone,
-        licenseNumber: spec.license,
-        verificationStatus: DRIVER_VERIFICATION.VERIFIED,
-        status: DRIVER_STATUS.ACTIVE,
-        upiId: spec.email.split('@')[0].replace('.', '') + '@upi',
-        paymentInstructions: 'Pay the exact fare, then upload the screenshot.',
-        rating: 4.6,
-        totalTrips: 12,
-      })
-    );
-  }
-
-  const vehicleSpecs = [
-    {
-      make: 'Maruti',
-      model: 'Dzire',
-      type: VEHICLE_TYPES.FIVE_SEATER,
-      reg: 'DL01AB1001',
-    },
-    {
-      make: 'Maruti',
-      model: 'Ertiga',
-      type: VEHICLE_TYPES.SIX_SEATER,
-      reg: 'UP25CD2002',
-    },
-  ];
-
-  const vehicles = [];
-  for (let i = 0; i < vehicleSpecs.length; i += 1) {
-    const v = vehicleSpecs[i];
-    const seats = seatConfigurationForType(v.type);
+    const driver = await Driver.create({
+      userId: user._id,
+      name: spec.name,
+      phone: spec.phone,
+      licenseNumber: spec.license,
+      verificationStatus: DRIVER_VERIFICATION.VERIFIED,
+      status: DRIVER_STATUS.ACTIVE,
+      upiId: `${spec.username}@upi`,
+      paymentInstructions: 'Demo UPI only — not a real bank handle. Pay the exact fare, then upload the screenshot.',
+      rating: 0,
+      totalTrips: 0,
+      isSeed: true,
+      isDemo: true,
+    });
+    drivers.push(driver);
+    const seats = seatConfigurationForType(spec.type);
     vehicles.push(
       await Vehicle.create({
-        driverId: drivers[i]._id,
-        registrationNumber: v.reg,
-        make: v.make,
-        model: v.model,
-        vehicleType: v.type,
+        driverId: driver._id,
+        registrationNumber: spec.reg,
+        make: spec.make,
+        model: spec.model,
+        vehicleType: spec.type,
         capacity: seats.length,
         seatConfiguration: seats,
         features: ['AC', 'Charging'],
@@ -198,10 +189,13 @@ export async function runSeed({ disconnect = true, connect = true, force = false
     { origin: { city: 'Delhi', state: 'Delhi' }, destination: { city: 'Agra', state: 'Uttar Pradesh' }, stops: [], estimatedDuration: 240 },
     { origin: { city: 'Agra', state: 'Uttar Pradesh' }, destination: { city: 'Delhi', state: 'Delhi' }, stops: [], estimatedDuration: 240 },
     { origin: { city: 'Delhi', state: 'Delhi' }, destination: { city: 'Dehradun', state: 'Uttarakhand' }, stops: [], estimatedDuration: 360 },
+    { origin: { city: 'Dehradun', state: 'Uttarakhand' }, destination: { city: 'Delhi', state: 'Delhi' }, stops: [], estimatedDuration: 360 },
     { origin: { city: 'Gurugram', state: 'Haryana' }, destination: { city: 'Jaipur', state: 'Rajasthan' }, stops: [], estimatedDuration: 300 },
     { origin: { city: 'Chandigarh', state: 'Chandigarh' }, destination: { city: 'Shimla', state: 'Himachal Pradesh' }, stops: [], estimatedDuration: 210 },
     { origin: { city: 'Mumbai', state: 'Maharashtra' }, destination: { city: 'Pune', state: 'Maharashtra' }, stops: [], estimatedDuration: 210 },
+    { origin: { city: 'Pune', state: 'Maharashtra' }, destination: { city: 'Mumbai', state: 'Maharashtra' }, stops: [], estimatedDuration: 210 },
     { origin: { city: 'Bengaluru', state: 'Karnataka' }, destination: { city: 'Mysuru', state: 'Karnataka' }, stops: [], estimatedDuration: 180 },
+    { origin: { city: 'Mysuru', state: 'Karnataka' }, destination: { city: 'Bengaluru', state: 'Karnataka' }, stops: [], estimatedDuration: 180 },
     { origin: { city: 'Hyderabad', state: 'Telangana' }, destination: { city: 'Vijayawada', state: 'Andhra Pradesh' }, stops: [], estimatedDuration: 330 },
     { origin: { city: 'Chennai', state: 'Tamil Nadu' }, destination: { city: 'Bengaluru', state: 'Karnataka' }, stops: [], estimatedDuration: 360 },
     { origin: { city: 'Lucknow', state: 'Uttar Pradesh' }, destination: { city: 'Kanpur', state: 'Uttar Pradesh' }, stops: [], estimatedDuration: 150 },
@@ -219,36 +213,41 @@ export async function runSeed({ disconnect = true, connect = true, force = false
   }
 
   const rideTemplates = [
-    { route: 0, price: 899, pickup: 'Kashmere Gate ISBT', drop: 'Sector 17 Chandigarh' },
-    { route: 1, price: 899, pickup: 'Sector 43 Chandigarh', drop: 'Anand Vihar ISBT' },
-    { route: 2, price: 999, pickup: 'Sarai Kale Khan', drop: 'Sindhi Camp Jaipur' },
-    { route: 3, price: 999, pickup: 'Sindhi Camp', drop: 'Kashmere Gate' },
-    { route: 4, price: 749, pickup: 'Sarai Kale Khan', drop: 'Agra Idgah' },
-    { route: 5, price: 749, pickup: 'Agra Cantt', drop: 'Sarai Kale Khan' },
-    { route: 6, price: 1099, pickup: 'ISBT Kashmiri Gate', drop: 'Dehradun Clock Tower' },
-    { route: 7, price: 949, pickup: 'Cyber Hub Gurugram', drop: 'Tonk Phatak Jaipur' },
-    { route: 8, price: 699, pickup: 'Sector 17', drop: 'Shimla Mall Road' },
-    { route: 9, price: 599, pickup: 'Dadar TT', drop: 'Shivaji Nagar Pune' },
-    { route: 10, price: 549, pickup: 'Majestic', drop: 'Mysuru Bus Stand' },
-    { route: 11, price: 899, pickup: 'MGBS Hyderabad', drop: 'Vijayawada Pandit Nehru' },
-    { route: 12, price: 999, pickup: 'Koyambedu', drop: 'Kempegowda Bus Station' },
-    { route: 13, price: 399, pickup: 'Alambagh Lucknow', drop: 'Kanpur Collective' },
-    { route: 14, price: 799, pickup: 'IFFCO Chowk', drop: 'Civil Lines Bareilly' },
+    { route: 0, price: 899, pickup: 'Kashmere Gate ISBT', drop: 'Sector 17 Chandigarh', driver: 0 },
+    { route: 1, price: 899, pickup: 'Sector 43 Chandigarh', drop: 'Anand Vihar ISBT', driver: 2 },
+    { route: 2, price: 999, pickup: 'Sarai Kale Khan', drop: 'Sindhi Camp Jaipur', driver: 1 },
+    { route: 3, price: 999, pickup: 'Sindhi Camp', drop: 'Kashmere Gate', driver: 1 },
+    { route: 4, price: 749, pickup: 'Sarai Kale Khan', drop: 'Agra Idgah', driver: 8 },
+    { route: 5, price: 749, pickup: 'Agra Cantt', drop: 'Sarai Kale Khan', driver: 8 },
+    { route: 6, price: 1099, pickup: 'ISBT Kashmiri Gate', drop: 'Dehradun Clock Tower', driver: 6 },
+    { route: 7, price: 1099, pickup: 'Dehradun Clock Tower', drop: 'Kashmere Gate', driver: 6 },
+    { route: 8, price: 949, pickup: 'Cyber Hub Gurugram', drop: 'Tonk Phatak Jaipur', driver: 1 },
+    { route: 9, price: 699, pickup: 'Sector 17', drop: 'Shimla Mall Road', driver: 2 },
+    { route: 10, price: 599, pickup: 'Dadar TT', drop: 'Shivaji Nagar Pune', driver: 3 },
+    { route: 11, price: 599, pickup: 'Shivaji Nagar Pune', drop: 'Dadar TT', driver: 3 },
+    { route: 12, price: 549, pickup: 'Majestic', drop: 'Mysuru Bus Stand', driver: 7 },
+    { route: 13, price: 549, pickup: 'Mysuru Bus Stand', drop: 'Majestic', driver: 7 },
+    { route: 14, price: 899, pickup: 'MGBS Hyderabad', drop: 'Vijayawada Pandit Nehru', driver: 5 },
+    { route: 15, price: 999, pickup: 'Koyambedu', drop: 'Kempegowda Bus Station', driver: 9 },
+    { route: 16, price: 399, pickup: 'Alambagh Lucknow', drop: 'Kanpur Collective', driver: 4 },
+    { route: 17, price: 799, pickup: 'IFFCO Chowk', drop: 'Civil Lines Bareilly', driver: 0 },
   ];
   const departureHours = [6, 7, 8, 9, 10, 14, 16, 18, 20, 22];
 
   const ridePlans = [];
-  for (let i = 0; i < 28; i += 1) {
+  for (let i = 0; i < 36; i += 1) {
     const template = rideTemplates[i % rideTemplates.length];
-    const driver = i % 2;
+    const driver = template.driver % drivers.length;
     ridePlans.push({
       ...template,
       route: template.route % routes.length,
       driver,
       vehicle: driver,
-      day: Math.floor(i / 3),
+      day: Math.floor(i / 4),
       hour: departureHours[i % departureHours.length],
       price: template.price + (i % 3) * 50,
+      // Every 8th scheduled ride is seeded fully booked for discovery UI
+      fillSeats: i % 8 === 3,
       status: i % 11 === 0 ? RIDE_STATUS.COMPLETED : i % 9 === 0 ? RIDE_STATUS.ACTIVE : RIDE_STATUS.SCHEDULED,
     });
   }
@@ -311,8 +310,21 @@ export async function runSeed({ disconnect = true, connect = true, force = false
         seats,
         status: plan.status,
         isSeed: true,
+        isDemo: true,
       })
     );
+  }
+
+  // Mark some scheduled demo rides as fully booked (no real passenger accounts).
+  for (let i = 0; i < ridePlans.length; i += 1) {
+    if (!ridePlans[i].fillSeats || rides[i].status !== RIDE_STATUS.SCHEDULED) continue;
+    const ride = rides[i];
+    for (const seat of ride.seats) {
+      seat.status = SEAT_STATUS.BOOKED;
+      seat.bookingId = null;
+    }
+    ride.availableSeats = 0;
+    await ride.save();
   }
 
   const customerSpecs = [
@@ -340,17 +352,21 @@ export async function runSeed({ disconnect = true, connect = true, force = false
     );
   }
 
-  // Confirmed bookings so customer / driver / admin lists have real data
+  // Confirmed demo bookings on rides that still have open seats (skip fully-filled demos)
+  const openRideIndexes = rides
+    .map((r, idx) => ({ r, idx }))
+    .filter(({ r }) => r.status === RIDE_STATUS.SCHEDULED && r.availableSeats > 0)
+    .map(({ idx }) => idx);
   const bookingPlans = [
     {
       customer: 0,
-      ride: 0,
+      ride: openRideIndexes[0] ?? 0,
       seats: ['A1'],
       passengers: [{ name: 'Priya Sharma', phone: '9111100001', age: 28, seatNumber: 'A1' }],
     },
     {
       customer: 1,
-      ride: 0,
+      ride: openRideIndexes[0] ?? 0,
       seats: ['B1', 'B3'],
       passengers: [
         { name: 'Rohan Mehta', phone: '9111100002', age: 32, seatNumber: 'B1' },
@@ -359,13 +375,13 @@ export async function runSeed({ disconnect = true, connect = true, force = false
     },
     {
       customer: 2,
-      ride: 1,
+      ride: openRideIndexes[1] ?? 1,
       seats: ['A1'],
       passengers: [{ name: 'Sneha Patel', phone: '9111100003', age: 26, seatNumber: 'A1' }],
     },
     {
       customer: 3,
-      ride: 2,
+      ride: openRideIndexes[2] ?? 2,
       seats: ['B2'],
       passengers: [{ name: 'Vikram Joshi', phone: '9111100004', age: 35, seatNumber: 'B2' }],
     },
@@ -550,6 +566,8 @@ export async function runSeed({ disconnect = true, connect = true, force = false
     availableSeats: corridorSeats.length,
     seats: corridorSeats,
     status: RIDE_STATUS.SCHEDULED,
+    isSeed: true,
+    isDemo: true,
   });
   const corridorPayRef = await nextPaymentReference();
   await Booking.create({

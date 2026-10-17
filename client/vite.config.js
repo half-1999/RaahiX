@@ -8,8 +8,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5055',
+        target: 'http://127.0.0.1:5055',
         changeOrigin: true,
+        // Avoid noisy ECONNREFUSED spam while the API is still binding.
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if (res && !res.headersSent && typeof res.writeHead === 'function') {
+              res.writeHead(502, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ message: 'API starting up — retry in a moment', code: 'API_UNAVAILABLE' }));
+            } else if (err?.code !== 'ECONNREFUSED') {
+              console.error('[vite proxy]', err.message);
+            }
+          });
+        },
       },
     },
   },

@@ -2,6 +2,9 @@ const USER_KEY = 'user';
 const ACCESS_KEY = 'accessToken';
 const REFRESH_KEY = 'refreshToken';
 
+/** Fired when tokens are wiped (e.g. refresh 401 after reseed) so AuthContext can sync. */
+export const SESSION_CLEARED_EVENT = 'raahix:session-cleared';
+
 export function getStoredUser() {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -17,10 +20,13 @@ export function setSession({ user, accessToken, refreshToken }) {
   if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
 }
 
-export function clearSession() {
+export function clearSession({ notify = true } = {}) {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);
+  if (notify && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_CLEARED_EVENT));
+  }
 }
 
 export function getAccessToken() {

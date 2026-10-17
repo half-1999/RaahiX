@@ -26,6 +26,7 @@ import {
 } from '../../utils/format';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import { cn } from '../../utils/cn';
 import { cabDisplayName, rideAmenities, rideHeroImage } from '../../utils/ridePresentation';
 import { vehicleTypeLabel } from '../../utils/vehicleLayouts';
 
@@ -54,7 +55,11 @@ const amenityIcon = {
   Water: Droplets,
 };
 
-export default function RideCard({ ride, passengers = 1 }) {
+export default function RideCard({
+  ride,
+  passengers = 1,
+  variant = 'available', // available | full | demo
+}) {
   const id = entityId(ride);
   const origin = ride.route?.origin || ride.origin;
   const destination = ride.route?.destination || ride.destination;
@@ -64,36 +69,67 @@ export default function RideCard({ ride, passengers = 1 }) {
   const amenities = rideAmenities(ride);
   const name = cabDisplayName(ride);
   const rating = ride.rating;
+  const isDemo = Boolean(ride.isDemo || ride.isSeed || variant === 'demo');
+  const isFull = Boolean(ride.fullyBooked || variant === 'full' || seats === 0);
+  const canBook = !isFull && ride.bookable !== false;
+  const occupied = ride.occupiedSeats ?? Math.max(0, (ride.totalSeats || 0) - (seats || 0));
+  const driverName = ride.driver?.name;
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-[var(--shadow-lift)]">
+    <article
+      className={cn(
+        'overflow-hidden rounded-2xl border bg-white shadow-[var(--shadow-soft)] transition',
+        isFull ? 'border-line opacity-95' : 'border-line hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-[var(--shadow-lift)]',
+        isDemo && 'ring-1 ring-coral/20'
+      )}
+    >
       <div className="grid md:grid-cols-[200px_1fr]">
         <div className="relative h-44 md:h-auto">
-          <img
-            src={rideHeroImage(ride)}
-            alt={name}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute left-3 top-3">
+          <img src={rideHeroImage(ride)} alt={name} className="h-full w-full object-cover" />
+          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
             <Badge tone="brand" className="bg-white/95 text-black backdrop-blur">
               {vehicleTypeLabel(ride.vehicle?.vehicleType || ride.vehicleType)}
             </Badge>
+            {isDemo ? (
+              <Badge tone="warning" className="bg-white/95 backdrop-blur">
+                Demo ride
+              </Badge>
+            ) : null}
+            {isFull ? (
+              <Badge tone="neutral" className="bg-white/95 backdrop-blur">
+                Fully booked
+              </Badge>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col gap-4 p-4 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-display text-xl font-bold text-navy">{name}</h3>
-              <p className="mt-1 flex items-center gap-2 text-sm text-slate">
-                <span className="inline-flex items-center gap-1 font-semibold text-navy">
-                  <Star className="h-3.5 w-3.5 fill-coral text-coral" />
-                  {rating ? `${Number(rating).toFixed(1)}${ride.reviewCount ? ` (${ride.reviewCount})` : ''}` : 'New'}
-                </span>
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate">
+                {rating ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-navy">
+                    <Star className="h-3.5 w-3.5 fill-coral text-coral" />
+                    {Number(rating).toFixed(1)}
+                    {ride.reviewCount ? ` (${ride.reviewCount})` : ''}
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-slate">No public rating yet</span>
+                )}
                 <span aria-hidden>·</span>
                 <span>
                   {cityLabel(origin)} → {cityLabel(destination)}
                 </span>
               </p>
+              {driverName ? (
+                <p className="mt-1 text-xs text-slate">
+                  Driver {driverName}
+                  {isDemo ? ' · demo profile' : ''}
+                </p>
+              ) : null}
+              {ride.matchNote ? (
+                <p className="mt-2 text-xs font-medium text-brand-ink">{ride.matchNote}</p>
+              ) : null}
             </div>
             <div className="text-right">
               <p className="font-display text-2xl font-bold text-brand-dark">{formatCurrency(price)}</p>
@@ -113,10 +149,17 @@ export default function RideCard({ ride, passengers = 1 }) {
                 {formatDuration(duration)}
               </span>
             ) : null}
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-soft px-2 py-1 text-sm font-bold text-navy">
-              <Users className="h-4 w-4 text-brand-dark" />
-              {seats ?? '—'} seats left
-            </span>
+            {isFull ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-mist px-2 py-1 text-sm font-bold text-slate">
+                <Users className="h-4 w-4" />
+                {occupied}/{ride.totalSeats || occupied} seats taken
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-soft px-2 py-1 text-sm font-bold text-navy">
+                <Users className="h-4 w-4 text-brand-dark" />
+                {seats ?? '—'} seats left
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate">
               <CarFront className="h-3.5 w-3.5" />
               {name}
@@ -141,10 +184,23 @@ export default function RideCard({ ride, passengers = 1 }) {
             })}
           </div>
 
-          <div className="mt-auto flex justify-end">
-            <Link to={`/rides/${id}?passengers=${Math.max(1, Number(passengers) || 1)}`}>
-              <Button size="sm">View seats</Button>
-            </Link>
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+            {isDemo ? (
+              <p className="max-w-sm text-xs text-slate">
+                Demonstration data — not a verified live offer.
+              </p>
+            ) : (
+              <span />
+            )}
+            {canBook ? (
+              <Link to={`/rides/${id}?passengers=${Math.max(1, Number(passengers) || 1)}`}>
+                <Button size="sm">View seats</Button>
+              </Link>
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                {isFull ? 'Fully booked' : 'Unavailable'}
+              </Button>
+            )}
           </div>
         </div>
       </div>

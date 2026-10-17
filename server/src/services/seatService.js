@@ -8,6 +8,15 @@ import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
 import { releaseExpiredSegmentHolds, releaseSegmentHold } from './segmentService.js';
 
+function assertDemoRideBookable(ride) {
+  if ((ride.isDemo || ride.isSeed) && !config.demo?.allowBooking) {
+    throw new AppError('Demonstration rides cannot be booked', {
+      code: ErrorCodes.RIDE_NOT_AVAILABLE,
+      statusCode: 400,
+    });
+  }
+}
+
 export function recountAvailableSeats(seats) {
   return seats.filter((s) => s.status === SEAT_STATUS.AVAILABLE).length;
 }
@@ -49,6 +58,7 @@ export async function holdSeats(userId, rideId, seatNumbers) {
       statusCode: 400,
     });
   }
+  assertDemoRideBookable(ride);
 
   const known = new Set(ride.seats.map((s) => s.seatNumber));
   for (const sn of uniqueSeats) {

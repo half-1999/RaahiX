@@ -32,6 +32,7 @@ const stopSchema = z.object({
 });
 
 export const searchRidesSchema = z.object({
+  sort: z.enum(['recommended', 'price', 'departure', 'availability']).optional().default('recommended'),
   originCity: z.string().min(1),
   destinationCity: z.string().min(1),
   date: z.string().min(1),

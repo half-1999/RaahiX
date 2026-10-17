@@ -73,4 +73,15 @@ export const config = {
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'Admin@12345',
     allowReset: process.env.ALLOW_SEED_RESET === 'true' || process.env.NODE_ENV !== 'production',
   },
+  /** Demo rides are labeled inventory. Booking them is allowed outside production for workflow testing. */
+  demo: {
+    allowBooking: process.env.ALLOW_DEMO_BOOKING === 'true' || env !== 'production',
+  },
+  ranking: {
+    departureTime: Number(process.env.RANK_W_DEPARTURE) || 0.4,
+    routeMatch: Number(process.env.RANK_W_ROUTE) || 0.3,
+    price: Number(process.env.RANK_W_PRICE) || 0.15,
+    seats: Number(process.env.RANK_W_SEATS) || 0.1,
+    quality: Number(process.env.RANK_W_QUALITY) || 0.05,
+  },
 };

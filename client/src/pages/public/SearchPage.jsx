@@ -21,7 +21,7 @@ const SORTS = [
   { id: 'recommended', label: 'Recommended' },
   { id: 'price', label: 'Lowest price' },
   { id: 'departure', label: 'Earliest departure' },
-  { id: 'rating', label: 'Highest rated' },
+  { id: 'availability', label: 'Most seats left' },
 ];
 
 const TIME_FILTERS = [
@@ -38,10 +38,39 @@ function tomorrowLocal() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function addDaysLocal(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function applyClientFilters(list, { timeFilter, amenityFilter, vehicleType }) {
+  let next = [...list];
+  if (timeFilter !== 'any') {
+    const bucket = TIME_FILTERS.find((t) => t.id === timeFilter);
+    next = next.filter((r) => {
+      const h = new Date(r.departureTime).getHours();
+      return h >= bucket.min && h <= bucket.max;
+    });
+  }
+  if (amenityFilter === 'ac') {
+    next = next.filter((r) =>
+      (r.vehicle?.features || r.features || ['AC']).some((f) => /ac/i.test(f))
+    );
+  }
+  if (vehicleType !== 'all') {
+    next = next.filter(
+      (r) => normalizeVehicleType(r.vehicle?.vehicleType || r.vehicleType) === vehicleType
+    );
+  }
+  return next;
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const [params, setSearchParams] = useSearchParams();
-  const [sort, setSort] = useState('recommended');
+  const [sort, setSort] = useState(params.get('sort') || 'recommended');
   const [timeFilter, setTimeFilter] = useState('any');
   const [amenityFilter, setAmenityFilter] = useState('all');
   const [vehicleType, setVehicleType] = useState('all');
@@ -53,8 +82,9 @@ export default function SearchPage() {
       destinationCity: params.get('destinationCity') || '',
       date: params.get('date') || '',
       passengers: params.get('passengers') || '1',
+      sort: params.get('sort') || sort,
     }),
-    [params]
+    [params, sort]
   );
 
   const enabled = Boolean(query.originCity && query.destinationCity && query.date);
@@ -65,35 +95,25 @@ export default function SearchPage() {
     enabled,
   });
 
-  const rides = useMemo(() => {
-    let list = [...(data?.rides || data || [])];
-    if (timeFilter !== 'any') {
-      const bucket = TIME_FILTERS.find((t) => t.id === timeFilter);
-      list = list.filter((r) => {
-        const h = new Date(r.departureTime).getHours();
-        return h >= bucket.min && h <= bucket.max;
-      });
-    }
-    if (amenityFilter === 'ac') {
-      list = list.filter((r) =>
-        (r.vehicle?.features || r.features || ['AC']).some((f) => /ac/i.test(f))
-      );
-    }
-    if (vehicleType !== 'all') {
-      list = list.filter(
-        (r) =>
-          normalizeVehicleType(r.vehicle?.vehicleType || r.vehicleType) === vehicleType
-      );
-    }
-    if (sort === 'price') {
-      list.sort((a, b) => (a.pricePerSeat || 0) - (b.pricePerSeat || 0));
-    } else if (sort === 'departure') {
-      list.sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime));
-    } else if (sort === 'rating') {
-      list.sort((a, b) => (b.driver?.rating || 0) - (a.driver?.rating || 0));
-    }
-    return list;
-  }, [data, sort, timeFilter, amenityFilter, vehicleType]);
+  const filterOpts = { timeFilter, amenityFilter, vehicleType };
+  const available = useMemo(
+    () => applyClientFilters(data?.available || data?.rides || [], filterOpts),
+    [data, timeFilter, amenityFilter, vehicleType]
+  );
+  const fullyBooked = useMemo(
+    () => applyClientFilters(data?.fullyBooked || [], filterOpts),
+    [data, timeFilter, amenityFilter, vehicleType]
+  );
+  const demo = useMemo(
+    () => applyClientFilters(data?.demo || [], filterOpts),
+    [data, timeFilter, amenityFilter, vehicleType]
+  );
+  const meta = data?.meta;
+  const showingDemo =
+    meta?.inventoryKind === 'demo' ||
+    meta?.inventoryKind === 'fallback' ||
+    (demo.length > 0 && !(data?.meta?.counts?.genuineAvailable > 0));
+  const showingFallback = Boolean(meta?.guaranteedFallback);
 
   const activeFilterCount = [
     sort !== 'recommended',
@@ -103,7 +123,14 @@ export default function SearchPage() {
   ].filter(Boolean).length;
 
   const searchCompletedEmpty =
-    enabled && !isLoading && !isFetching && !isError && data != null && !rides.length;
+    enabled &&
+    !isLoading &&
+    !isFetching &&
+    !isError &&
+    data != null &&
+    !available.length &&
+    !fullyBooked.length &&
+    !demo.length;
 
   function patchQuery(patch) {
     const next = new URLSearchParams(params);
@@ -119,10 +146,15 @@ export default function SearchPage() {
     setTimeFilter('any');
     setAmenityFilter('all');
     setVehicleType('all');
+    patchQuery({ sort: 'recommended' });
   }
 
   function scrollToForm() {
     document.getElementById('ride-search-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function scrollToId(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   return (
@@ -131,7 +163,7 @@ export default function SearchPage() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-ink">Search</p>
-            <h1 className="mt-1 font-display text-3xl font-bold text-ink">Available cars</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold text-ink">Find your ride</h1>
             <p className="mt-1 text-sm text-slate">
               {enabled
                 ? `${query.originCity} → ${query.destinationCity} · ${query.date} · ${query.passengers} passenger(s)`
@@ -165,7 +197,11 @@ export default function SearchPage() {
                 <Select
                   label="Sort"
                   value={sort}
-                  onChange={(e) => setSort(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSort(value);
+                    patchQuery({ sort: value });
+                  }}
                   options={SORTS.map((s) => ({ value: s.id, label: s.label }))}
                 />
                 <Select
@@ -206,7 +242,10 @@ export default function SearchPage() {
         </div>
 
         <div id="ride-search-form" className="scroll-mt-24">
-          <RideSearchForm initial={query} className="mb-6 rounded-2xl border border-line bg-white p-4 shadow-[var(--shadow-soft)] md:p-5" />
+          <RideSearchForm
+            initial={query}
+            className="mb-6 rounded-2xl border border-line bg-white p-4 shadow-[var(--shadow-soft)] md:p-5"
+          />
         </div>
 
         {!enabled ? (
@@ -227,6 +266,23 @@ export default function SearchPage() {
             <button type="button" className="underline" onClick={() => refetch()}>
               Retry
             </button>
+          </Alert>
+        ) : null}
+
+        {showingFallback && available.length ? (
+          <Alert tone="info" title="Closest matches for you" className="mb-4">
+            {meta?.fallbackNote ||
+              'No exact seats for that search — showing the nearest alternatives so you always have options.'}
+          </Alert>
+        ) : null}
+
+        {showingDemo && !showingFallback && available.length ? (
+          <Alert tone="warning" title="Demonstration rides" className="mb-4">
+            {meta?.demoNote ||
+              'These rides use fictional demo drivers. They are not live marketplace offers.'}
+            {meta?.allowDemoBooking
+              ? ' Local demo booking is enabled for workflow testing.'
+              : ' Booking is disabled for demo inventory.'}
           </Alert>
         ) : null}
 
@@ -252,6 +308,19 @@ export default function SearchPage() {
                   <CalendarDays className="h-4 w-4" aria-hidden="true" />
                   Try tomorrow
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    patchQuery({
+                      originCity: query.destinationCity,
+                      destinationCity: query.originCity,
+                    });
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                  Reverse route
+                </Button>
                 <Button type="button" variant="outline" onClick={scrollToForm}>
                   <MapPinned className="h-4 w-4" aria-hidden="true" />
                   Edit route
@@ -264,7 +333,6 @@ export default function SearchPage() {
                     refetch();
                   }}
                 >
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Clear filters
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => refetch()}>
@@ -286,12 +354,56 @@ export default function SearchPage() {
           </div>
         ) : null}
 
-        {rides.length ? (
-          <div className="space-y-4">
-            <p className="text-sm font-medium text-slate">{rides.length} car(s) match your search</p>
-            {rides.map((ride) => (
-              <RideCard key={ride.id || ride._id} ride={ride} passengers={query.passengers} />
+        {available.length ? (
+          <section className="space-y-4" aria-labelledby="available-rides-heading">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 id="available-rides-heading" className="font-display text-xl font-bold text-ink">
+                  {showingDemo ? 'Sample rides' : 'Available rides'}
+                </h2>
+                <p className="text-sm text-slate">{available.length} match your search</p>
+              </div>
+            </div>
+            {available.map((ride) => (
+              <RideCard
+                key={ride.id || ride._id}
+                ride={ride}
+                passengers={query.passengers}
+                variant={showingDemo ? 'demo' : 'available'}
+              />
             ))}
+          </section>
+        ) : null}
+
+        {fullyBooked.length ? (
+          <section id="fully-booked" className="mt-10 space-y-4 scroll-mt-24" aria-labelledby="full-rides-heading">
+            <div>
+              <h2 id="full-rides-heading" className="font-display text-xl font-bold text-ink">
+                Fully booked rides
+              </h2>
+              <p className="text-sm text-slate">
+                These rides are currently full. Try another departure time or check back later.
+              </p>
+            </div>
+            {fullyBooked.map((ride) => (
+              <RideCard
+                key={`full-${ride.id || ride._id}`}
+                ride={ride}
+                passengers={query.passengers}
+                variant="full"
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {!available.length && !searchCompletedEmpty && fullyBooked.length ? (
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button type="button" onClick={() => patchQuery({ date: addDaysLocal(1) })}>
+              Search tomorrow
+            </Button>
+            <Button type="button" variant="outline" onClick={() => scrollToId('fully-booked')}>
+              View fully booked
+            </Button>
           </div>
         ) : null}
       </div>

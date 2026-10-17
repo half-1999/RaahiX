@@ -25,6 +25,8 @@ const driverSchema = new mongoose.Schema(
     paymentInstructions: { type: String, default: '', trim: true },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     totalTrips: { type: Number, default: 0, min: 0 },
+    isSeed: { type: Boolean, default: false },
+    isDemo: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
