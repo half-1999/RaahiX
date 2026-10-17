@@ -1,11 +1,6 @@
 import { RIDE_STATUS, REFUND_STATUS } from '../constants/enums.js';
 
-const STARTED = new Set([
-  RIDE_STATUS.ACTIVE,
-  RIDE_STATUS.BOARDING,
-  RIDE_STATUS.STARTED,
-  RIDE_STATUS.COMPLETED,
-]);
+const STARTED = new Set([RIDE_STATUS.ACTIVE, RIDE_STATUS.COMPLETED]);
 
 export function obligationPercent({ departureTime, rideStatus, rideCancelled = false }) {
   if (rideCancelled) return 100;

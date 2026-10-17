@@ -1,10 +1,13 @@
+import { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Download, Share2, Ticket } from 'lucide-react';
+import { CheckCircle2, Download, ImageUp, Share2, Ticket } from 'lucide-react';
 import { bookingService } from '../../services/bookingService';
+import { getErrorMessage } from '../../services/api';
 import WhatsAppAction from '../../components/booking/WhatsAppAction';
 import BookingStepper from '../../components/booking/BookingStepper';
+import HoldTimer from '../../components/seats/HoldTimer';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import Skeleton from '../../components/ui/Skeleton';
@@ -21,7 +24,12 @@ import { normalizeBooking } from '../../utils/bookingNormalize';
 
 export default function BookingSuccessPage() {
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const proofInput = useRef(null);
   const bookingId = location.state?.bookingId || entityId(location.state?.booking);
+  const [mode, setMode] = useState(location.state?.mode || 'paid');
+  const [uploadError, setUploadError] = useState('');
+  const isHoldOnly = mode === 'hold';
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['bookings', bookingId],
@@ -31,6 +39,44 @@ export default function BookingSuccessPage() {
 
   const booking = normalizeBooking(data?.booking || data || location.state?.booking);
   const ride = booking?.ride;
+  const driver = ride?.driver;
+  const id = entityId(booking) || bookingId;
+  const proofAlreadyIn =
+    ['SUBMITTED', 'APPROVED'].includes(booking?.proofStatus) || mode === 'paid';
+
+  const proofMutation = useMutation({
+    mutationFn: (screenshot) =>
+      bookingService.submitProof(id, {
+        screenshot,
+        amount: Number(booking?.totalAmount || 0),
+      }),
+    onSuccess: (result) => {
+      setUploadError('');
+      setMode('paid');
+      queryClient.setQueryData(['bookings', bookingId], (prev) => {
+        const next = result?.booking || result;
+        if (!prev) return { booking: next };
+        if (prev.booking) return { ...prev, booking: { ...prev.booking, ...next } };
+        return { ...prev, ...next };
+      });
+      queryClient.invalidateQueries({ queryKey: ['bookings', bookingId] });
+    },
+    onError: (err) => setUploadError(getErrorMessage(err, 'Could not upload the screenshot')),
+  });
+
+  function onScreenshot(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+      setUploadError('Use a PNG, JPEG, or WebP screenshot under 2 MB.');
+      return;
+    }
+    setUploadError('');
+    const reader = new FileReader();
+    reader.onload = () => proofMutation.mutate(String(reader.result));
+    reader.readAsDataURL(file);
+  }
 
   if (!bookingId && !booking) {
     return (
@@ -69,6 +115,7 @@ export default function BookingSuccessPage() {
   const duration = ride?.route?.estimatedDuration || ride?.estimatedDuration;
   const primarySeat = seats[0];
   const meta = primarySeat ? seatMeta(primarySeat) : null;
+  const showHoldUpload = isHoldOnly && !proofAlreadyIn && booking?.bookingStatus === 'PENDING';
 
   const share = async () => {
     const text = `RaahiX booking ${booking.bookingNumber}: ${cityLabel(origin)} → ${destLabel}, seat ${seats.join(', ')}`;
@@ -85,7 +132,7 @@ export default function BookingSuccessPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
-      <BookingStepper current="confirmed" className="mb-6" />
+      <BookingStepper current={showHoldUpload ? 'payment' : 'confirmed'} className="mb-6" />
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,9 +143,24 @@ export default function BookingSuccessPage() {
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <h1 className="mt-4 font-display text-3xl font-bold text-balance">
-            You&apos;re all set for {destLabel.split(',')[0]}
+            {showHoldUpload
+              ? `Seats held for ${destLabel.split(',')[0]}`
+              : `Payment submitted for ${destLabel.split(',')[0]}`}
           </h1>
-          <p className="mt-2 text-sm text-ink/70">Booking ID</p>
+          <p className="mt-2 text-sm text-ink/80">
+            {showHoldUpload
+              ? 'Booked without payment for now. Pay and upload a screenshot before the hold expires — the seat is confirmed only after the driver approves.'
+              : 'Screenshot sent. Your booking stays pending until the driver verifies payment.'}
+          </p>
+          {showHoldUpload && booking.holdExpiresAt ? (
+            <div className="mx-auto mt-4 max-w-sm text-left">
+              <HoldTimer
+                expiresAt={booking.holdExpiresAt}
+                className="justify-center border-ink/15 bg-white/90 text-navy shadow-sm"
+              />
+            </div>
+          ) : null}
+          <p className="mt-3 text-sm text-ink/70">Booking ID</p>
           <p className="mt-1 font-mono text-lg font-semibold tracking-wide">
             {booking.bookingNumber || entityId(booking)}
           </p>
@@ -162,16 +224,72 @@ export default function BookingSuccessPage() {
               </dd>
             </div>
             <div className="rounded-xl border border-line p-3">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">Paid</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate">
+                {showHoldUpload ? 'Amount due' : 'Amount'}
+              </dt>
               <dd className="mt-1 font-display text-xl font-bold text-brand-dark">
                 {formatCurrency(booking.totalAmount)}
               </dd>
             </div>
           </dl>
 
+          {showHoldUpload ? (
+            <section className="print-hide mt-4 space-y-3 rounded-2xl border border-line bg-mist/50 p-4">
+              <h2 className="font-display text-lg font-bold text-navy">Pay and upload screenshot</h2>
+              <p className="text-sm text-slate">
+                Pay {formatCurrency(booking.totalAmount)} to the driver, then upload your UPI screenshot here.
+              </p>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate">UPI ID</p>
+                <p className="mt-1 font-display text-xl font-bold text-navy">
+                  {driver?.upiId || 'The driver has not added a UPI ID yet.'}
+                </p>
+              </div>
+              {driver?.paymentInstructions ? (
+                <p className="text-sm text-slate">{driver.paymentInstructions}</p>
+              ) : null}
+              {driver?.qrCode ? (
+                <img
+                  src={driver.qrCode}
+                  alt={`${driver?.name || 'Driver'} UPI QR code`}
+                  className="h-48 w-48 rounded-xl border border-line bg-white object-contain p-2"
+                />
+              ) : null}
+              {uploadError ? (
+                <Alert tone="error" title="Upload failed">
+                  {uploadError}
+                </Alert>
+              ) : null}
+              <input
+                ref={proofInput}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                disabled={proofMutation.isPending}
+                onChange={onScreenshot}
+              />
+              <Button
+                type="button"
+                className="w-full"
+                loading={proofMutation.isPending}
+                onClick={() => proofInput.current?.click()}
+              >
+                <ImageUp className="h-4 w-4" />
+                Upload payment screenshot
+              </Button>
+              <Link
+                to="/checkout"
+                state={{ bookingId: id, booking }}
+                className="block text-center text-sm font-semibold text-slate hover:text-brand-dark"
+              >
+                Open full checkout instead
+              </Link>
+            </section>
+          ) : null}
+
           <div className="print-hide mt-6 flex flex-col gap-2 sm:flex-row">
             <Link to={`/booking/${entityId(booking)}`} className="flex-1">
-              <Button className="w-full" variant="primary">
+              <Button className="w-full" variant={showHoldUpload ? 'outline' : 'primary'}>
                 <Ticket className="h-4 w-4" />
                 View ticket
               </Button>

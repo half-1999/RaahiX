@@ -4,9 +4,11 @@ import { fileURLToPath } from 'url';
 import { Booking } from '../models/Booking.js';
 import { Driver } from '../models/Driver.js';
 import { Ride } from '../models/Ride.js';
+import { Payment } from '../models/Payment.js';
 import {
   BOOKING_PAYMENT_STATUS,
   BOOKING_STATUS,
+  PAYMENT_STATUS,
   PROOF_STATUS,
   REFUND_STATUS,
   ROLES,
@@ -14,6 +16,7 @@ import {
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/index.js';
 import { releaseHold, confirmSeatsBooked } from './seatService.js';
 import {
   confirmSegmentHold,
@@ -21,9 +24,27 @@ import {
   usesSegmentInventory,
 } from './segmentService.js';
 import { requireReason, writeAudit } from './auditService.js';
+import { nextPaymentReference } from '../models/Counter.js';
 import * as notificationService from './notificationService.js';
 
 const proofDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.data/proofs');
+
+function sniffImageMime(buffer) {
+  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return 'image/png';
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  return null;
+}
 
 function decodeScreenshot(screenshot) {
   if (!screenshot || typeof screenshot !== 'string') {
@@ -46,9 +67,46 @@ function decodeScreenshot(screenshot) {
       statusCode: 400,
     });
   }
-  const mime = match[1] === 'image/jpg' ? 'image/jpeg' : match[1];
+  const sniffed = sniffImageMime(buffer);
+  if (!sniffed) {
+    throw new AppError('File content is not a valid PNG, JPEG, or WebP image', {
+      code: ErrorCodes.VALIDATION_ERROR,
+      statusCode: 400,
+    });
+  }
+  const declared = match[1] === 'image/jpg' ? 'image/jpeg' : match[1];
+  if (declared !== sniffed && !(declared === 'image/jpeg' && sniffed === 'image/jpeg')) {
+    // Allow minor header mismatches only when sniff confirms a supported image.
+  }
+  const mime = sniffed;
   const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
   return { mime, buffer, ext };
+}
+
+async function extendHoldForVerification(booking) {
+  const minutes = config.verificationHoldMinutes || 30;
+  const until = new Date(Date.now() + minutes * 60_000);
+  booking.verificationHoldUntil = until;
+  booking.holdExpiresAt = until;
+
+  const ride = await Ride.findById(booking.rideId);
+  if (!ride) return until;
+
+  if (usesSegmentInventory(ride)) {
+    for (const hold of ride.segmentHolds || []) {
+      if (hold.holdId === booking.holdId && hold.status === 'ACTIVE') {
+        hold.holdExpiresAt = until;
+      }
+    }
+  } else {
+    for (const seat of ride.seats || []) {
+      if (seat.holdId === booking.holdId && seat.status === 'HELD') {
+        seat.holdExpiresAt = until;
+      }
+    }
+  }
+  await ride.save();
+  return until;
 }
 
 async function loadBooking(bookingId) {
@@ -80,7 +138,8 @@ async function assertRideDriver(userId, rideId) {
 }
 
 function holdStillOpen(booking) {
-  return booking.holdExpiresAt && booking.holdExpiresAt > new Date();
+  const until = booking.verificationHoldUntil || booking.holdExpiresAt;
+  return until && new Date(until) > new Date();
 }
 
 async function commitHold(booking) {
@@ -136,6 +195,13 @@ export async function submitProof(userId, bookingId, { amount, screenshot }) {
   const filename = `${booking._id}.${file.ext}`;
   await fs.writeFile(path.join(proofDir, filename), file.buffer);
 
+  if (!booking.paymentReference) {
+    booking.paymentReference = await nextPaymentReference();
+  }
+
+  // Bound verification hold — seats stay reserved until this time, not indefinitely.
+  await extendHoldForVerification(booking);
+
   booking.proofStatus = PROOF_STATUS.SUBMITTED;
   booking.proofSubmittedAt = new Date();
   booking.proofSubmittedBy = userId;
@@ -145,7 +211,28 @@ export async function submitProof(userId, bookingId, { amount, screenshot }) {
   booking.proofRejectionReason = null;
   await booking.save();
 
-  logger.info('payment.proof_submitted', { bookingId: booking._id.toString() });
+  let payment = await Payment.findOne({ bookingId: booking._id }).sort({ createdAt: -1 });
+  if (!payment) {
+    payment = await Payment.create({
+      bookingId: booking._id,
+      userId: booking.userId,
+      paymentReference: booking.paymentReference,
+      amount: booking.proofAmount,
+      currency: booking.currency || 'INR',
+      gateway: 'manual_upi',
+      gatewayOrderId: `manual_${booking._id}`,
+      status: PAYMENT_STATUS.PENDING,
+    });
+  } else if (!payment.paymentReference) {
+    payment.paymentReference = booking.paymentReference;
+    payment.status = PAYMENT_STATUS.PENDING;
+    await payment.save();
+  }
+
+  logger.info('payment.proof_submitted', {
+    bookingId: booking._id.toString(),
+    paymentReference: booking.paymentReference,
+  });
   await notificationService.notifyPaymentSubmitted(booking);
   return booking;
 }
@@ -204,8 +291,34 @@ export async function reviewProof(userId, bookingId, { decision, reason }) {
   booking.proofStatus = PROOF_STATUS.APPROVED;
   booking.proofReviewedBy = userId;
   booking.proofReviewedAt = new Date();
+  if (!booking.paymentReference) {
+    booking.paymentReference = await nextPaymentReference();
+  }
   await booking.save();
-  logger.info('payment.proof_approved', { bookingId: booking._id.toString() });
+
+  await Payment.findOneAndUpdate(
+    { bookingId: booking._id },
+    {
+      $set: {
+        status: PAYMENT_STATUS.SUCCESS,
+        paidAt: new Date(),
+        paymentReference: booking.paymentReference,
+        amount: booking.proofAmount || booking.totalAmount,
+      },
+      $setOnInsert: {
+        userId: booking.userId,
+        gateway: 'manual_upi',
+        gatewayOrderId: `manual_${booking._id}`,
+        currency: booking.currency || 'INR',
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  logger.info('payment.proof_approved', {
+    bookingId: booking._id.toString(),
+    paymentReference: booking.paymentReference,
+  });
   await notificationService.notifyPaymentApproved(booking);
   return booking;
 }

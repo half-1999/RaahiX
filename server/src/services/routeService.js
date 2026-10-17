@@ -39,7 +39,15 @@ async function normalizedStops(stops = []) {
 }
 
 export async function createRoute(payload, actor) {
-  const { origin, destination, stops = [], estimatedDuration, status, createdByDriverId = null } = payload;
+  const {
+    name = '',
+    origin,
+    destination,
+    stops = [],
+    estimatedDuration,
+    status,
+    createdByDriverId = null,
+  } = payload;
 
   if (!origin?.city || !origin?.state || !destination?.city || !destination?.state) {
     throw new AppError('origin and destination with city/state are required', {
@@ -49,6 +57,7 @@ export async function createRoute(payload, actor) {
   }
 
   const route = await Route.create({
+    name: String(name || '').trim(),
     origin: await toPlace(origin),
     destination: await toPlace(destination),
     stops: await normalizedStops(stops),
@@ -87,6 +96,7 @@ export async function updateRoute(id, updates, actor) {
     status: route.status,
   };
 
+  if (updates.name !== undefined) route.name = String(updates.name || '').trim();
   if (updates.origin) route.origin = await toPlace(updates.origin);
   if (updates.destination) route.destination = await toPlace(updates.destination);
   if (updates.stops) route.stops = await normalizedStops(updates.stops);
@@ -195,6 +205,7 @@ export async function createOwnRoute(userId, payload, actor) {
 
   return createRoute(
     {
+      name: payload.name || `${origin.city} → ${destination.city}`,
       origin,
       destination,
       stops,
@@ -203,4 +214,53 @@ export async function createOwnRoute(userId, payload, actor) {
     },
     actor
   );
+}
+
+async function ownRoute(userId, routeId) {
+  const driver = await requireDriver(userId);
+  const route = await Route.findById(routeId);
+  if (!route) {
+    throw new AppError('Route not found', { code: ErrorCodes.ROUTE_NOT_FOUND, statusCode: 404 });
+  }
+  if (String(route.createdByDriverId) !== String(driver._id)) {
+    throw new AppError('You can only manage your own routes', {
+      code: ErrorCodes.AUTH_FORBIDDEN,
+      statusCode: 403,
+    });
+  }
+  return { driver, route };
+}
+
+export async function updateOwnRoute(userId, routeId, payload, actor) {
+  await ownRoute(userId, routeId);
+  const updates = {};
+  if (payload.name !== undefined) updates.name = payload.name;
+  if (payload.estimatedDuration !== undefined) updates.estimatedDuration = payload.estimatedDuration;
+  if (payload.status !== undefined) updates.status = payload.status;
+
+  if (payload.stops?.length >= 2) {
+    const places = [];
+    for (const stop of payload.stops) {
+      places.push(await toPlace(stop));
+    }
+    const keys = places.map((place) => String(place.locationId));
+    if (new Set(keys).size !== keys.length) {
+      throw new AppError('A route cannot repeat the same stop', {
+        code: ErrorCodes.VALIDATION_ERROR,
+        statusCode: 400,
+      });
+    }
+    const [origin, ...rest] = places;
+    const destination = rest.pop();
+    updates.origin = origin;
+    updates.destination = destination;
+    updates.stops = rest.map((place, index) => ({ ...place, sequence: index + 1 }));
+  }
+
+  return updateRoute(routeId, updates, actor);
+}
+
+export async function deactivateOwnRoute(userId, routeId, actor) {
+  await ownRoute(userId, routeId);
+  return updateRoute(routeId, { status: ROUTE_STATUS.INACTIVE }, actor);
 }

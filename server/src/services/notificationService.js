@@ -418,7 +418,49 @@ export async function notifyUpcomingRide(driverUserId, ride) {
   await notifyUser({
     userId: driverUser._id,
     type: 'UPCOMING_RIDE',
-    message: `Your ride is published and upcoming. Departure ${new Date(ride.departureTime).toISOString()}.`,
+    message: `Your ride is scheduled. Departure ${new Date(ride.departureTime).toISOString()}.`,
+    email: driverUser.email,
+    phone: driverUser.phone,
+  });
+}
+
+export async function notifyRideActivated(driverUserId, ride) {
+  const driverUser = await User.findById(driverUserId);
+  if (!driverUser) return;
+  const key = `RIDE_ACTIVATED:${ride._id}`;
+  const existing = await Notification.findOne({ userId: driverUserId, type: key });
+  if (existing) return existing;
+  return notifyUser({
+    userId: driverUser._id,
+    type: key,
+    message: `Ride is now active. Departure was ${new Date(ride.departureTime).toLocaleString()}.`,
+    email: driverUser.email,
+    phone: driverUser.phone,
+  });
+}
+
+export async function notifyRideCompleted(driverUserId, ride) {
+  const driverUser = await User.findById(driverUserId);
+  if (!driverUser) return;
+  const key = `RIDE_COMPLETED:${ride._id}`;
+  const existing = await Notification.findOne({ userId: driverUserId, type: key });
+  if (existing) return existing;
+  return notifyUser({
+    userId: driverUser._id,
+    type: key,
+    message: `Ride marked completed at ${new Date(ride.actualCompletedAt || Date.now()).toLocaleString()}.`,
+    email: driverUser.email,
+    phone: driverUser.phone,
+  });
+}
+
+export async function notifyPassengerAdded(driverUserId, ride, passenger) {
+  const driverUser = await User.findById(driverUserId);
+  if (!driverUser) return;
+  return notifyUser({
+    userId: driverUser._id,
+    type: 'PASSENGER_ADDED',
+    message: `Passenger ${passenger.name} added to your ride (${passenger.seatCount} seat(s)).`,
     email: driverUser.email,
     phone: driverUser.phone,
   });

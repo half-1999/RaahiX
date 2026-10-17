@@ -66,8 +66,11 @@ export const config = {
   },
   whatsappNumber: process.env.WHATSAPP_NUMBER || '919999999999',
   holdDurationMinutes: Number(process.env.HOLD_DURATION_MINUTES) || 10,
+  /** Extra seat lock after payment proof upload while driver reviews (minutes). */
+  verificationHoldMinutes: Number(process.env.VERIFICATION_HOLD_MINUTES) || 30,
   seed: {
     adminEmail: process.env.SEED_ADMIN_EMAIL || 'admin@localcab.dev',
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'Admin@12345',
+    allowReset: process.env.ALLOW_SEED_RESET === 'true' || process.env.NODE_ENV !== 'production',
   },
 };

@@ -1,10 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleRoute from './routes/RoleRoute';
 import PublicLayout from './components/layout/PublicLayout';
 import DriverLayout from './components/layout/DriverLayout';
+import PassengerLayout from './components/layout/PassengerLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
@@ -19,18 +20,21 @@ import RegisterPage from './pages/public/RegisterPage';
 import CheckoutPage from './pages/customer/CheckoutPage';
 import BookingSuccessPage from './pages/customer/BookingSuccessPage';
 import BookingDetailPage from './pages/customer/BookingDetailPage';
-import MyBookingsPage from './pages/customer/MyBookingsPage';
 import ProfilePage from './pages/customer/ProfilePage';
 import NotificationsPage from './pages/customer/NotificationsPage';
+import PassengerOverviewPage from './pages/customer/PassengerOverviewPage';
+import PassengerRidesPage from './pages/customer/PassengerRidesPage';
+import PassengerTripsPage from './pages/customer/PassengerTripsPage';
+import PassengerVehicleRoutePage from './pages/customer/PassengerVehicleRoutePage';
+import PassengerPaymentsPage from './pages/customer/PassengerPaymentsPage';
 
 import DriverDashboardPage from './pages/driver/DriverDashboardPage';
 import DriverRidesPage from './pages/driver/DriverRidesPage';
 import DriverRideDetailPage from './pages/driver/DriverRideDetailPage';
+import DriverVehicleRoutePage from './pages/driver/DriverVehicleRoutePage';
+import DriverPaymentsHubPage from './pages/driver/DriverPaymentsHubPage';
+import DriverPassengersHubPage from './pages/driver/DriverPassengersHubPage';
 import DriverPassengersPage from './pages/driver/DriverPassengersPage';
-import DriverVehiclesPage from './pages/driver/DriverVehiclesPage';
-import DriverRoutesPage from './pages/driver/DriverRoutesPage';
-import DriverPaymentsPage from './pages/driver/DriverPaymentsPage';
-import DriverRefundsPage from './pages/driver/DriverRefundsPage';
 
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -60,7 +64,20 @@ function RoleHomeRedirect() {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
   if (user.role === 'DRIVER') return <Navigate to="/driver" replace />;
-  return <Navigate to="/my-bookings" replace />;
+  return <Navigate to="/app" replace />;
+}
+
+function ProfileRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'DRIVER') return <Navigate to="/driver/profile" replace />;
+  if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
+  return <Navigate to="/app/profile" replace />;
+}
+
+function DriverPassengersRedirect() {
+  const { rideId } = useParams();
+  return <Navigate to={`/driver/rides/${rideId}`} replace />;
 }
 
 export default function App() {
@@ -109,24 +126,8 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="my-bookings"
-                  element={
-                    <ProtectedRoute>
-                      <RoleRoute roles={['CUSTOMER']}>
-                        <MyBookingsPage />
-                      </RoleRoute>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="profile"
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="my-bookings" element={<Navigate to="/app/trips" replace />} />
+                <Route path="profile" element={<ProfileRedirect />} />
                 <Route
                   path="notifications"
                   element={
@@ -136,6 +137,24 @@ export default function App() {
                   }
                 />
                 <Route path="home" element={<RoleHomeRedirect />} />
+              </Route>
+
+              <Route
+                path="app"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute roles={['CUSTOMER']}>
+                      <PassengerLayout />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<PassengerOverviewPage />} />
+                <Route path="rides" element={<PassengerRidesPage />} />
+                <Route path="trips" element={<PassengerTripsPage />} />
+                <Route path="vehicle-route" element={<PassengerVehicleRoutePage />} />
+                <Route path="payments" element={<PassengerPaymentsPage />} />
+                <Route path="profile" element={<ProfilePage />} />
               </Route>
 
               <Route
@@ -152,10 +171,15 @@ export default function App() {
                 <Route path="rides" element={<DriverRidesPage />} />
                 <Route path="rides/:rideId" element={<DriverRideDetailPage />} />
                 <Route path="rides/:rideId/passengers" element={<DriverPassengersPage />} />
-                <Route path="vehicles" element={<DriverVehiclesPage />} />
-                <Route path="routes" element={<DriverRoutesPage />} />
-                <Route path="payments" element={<DriverPaymentsPage />} />
-                <Route path="refunds" element={<DriverRefundsPage />} />
+                <Route path="trips" element={<Navigate to="/driver/rides" replace />} />
+                <Route path="trips/:rideId" element={<DriverPassengersRedirect />} />
+                <Route path="passengers" element={<DriverPassengersHubPage />} />
+                <Route path="vehicle-route" element={<DriverVehicleRoutePage />} />
+                <Route path="vehicles" element={<Navigate to="/driver/profile?section=vehicles" replace />} />
+                <Route path="routes" element={<Navigate to="/driver/profile?section=routes" replace />} />
+                <Route path="payments" element={<DriverPaymentsHubPage />} />
+                <Route path="refunds" element={<Navigate to="/driver/payments?section=refunds" replace />} />
+                <Route path="profile" element={<ProfilePage />} />
               </Route>
 
               <Route

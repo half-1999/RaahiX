@@ -34,18 +34,18 @@ export default function MyBookingsPage() {
   const bookings = (data?.bookings || data || []).filter((booking) => bucket(booking) === tab);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="space-y-4">
       <PageHeader
-        title="Your trips"
+        title="Trips"
         subtitle="Upcoming, active, and completed RaahiX bookings"
         actions={
-          <Link to="/search">
+          <Link to="/app/rides">
             <Button size="sm">Find a ride</Button>
           </Link>
         }
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-2">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {[
           ['Upcoming', data?.counts?.upcoming],
           ['Pending pay', data?.counts?.pendingPayments],

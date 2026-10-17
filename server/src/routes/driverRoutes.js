@@ -5,14 +5,18 @@ import { ROLES } from '../constants/enums.js';
 import {
   validate,
   driverStatusSchema,
+  driverVoidRideSchema,
   driverVehicleSchema,
   driverUpdateVehicleSchema,
   driverRouteSchema,
+  driverUpdateRouteSchema,
   driverRideSchema,
   driverUpdateRideSchema,
   driverCapacitySchema,
   driverPaymentDetailsSchema,
   paymentReviewSchema,
+  driverPassengerSchema,
+  driverUpdatePassengerSchema,
 } from '../validators/commonValidators.js';
 
 const router = Router();
@@ -20,6 +24,8 @@ const router = Router();
 router.use(authenticate, authorize(ROLES.DRIVER));
 
 router.get('/dashboard', driverController.dashboard);
+router.get('/dashboard/today', driverController.todayReport);
+router.get('/passengers', driverController.listAllPassengers);
 router.get('/payment-details', driverController.paymentDetails);
 router.patch(
   '/payment-details',
@@ -43,16 +49,33 @@ router.delete('/vehicles/:vehicleId', driverController.deactivateVehicle);
 router.get('/routes/available', driverController.listActiveRoutes);
 router.get('/routes', driverController.listRoutes);
 router.post('/routes', validate(driverRouteSchema), driverController.createRoute);
+router.patch('/routes/:routeId', validate(driverUpdateRouteSchema), driverController.updateRoute);
+router.delete('/routes/:routeId', driverController.deactivateRoute);
 router.get('/rides', driverController.listRides);
 router.post('/rides', validate(driverRideSchema), driverController.createRide);
 router.patch('/rides/:rideId', validate(driverUpdateRideSchema), driverController.updateRide);
 router.patch('/rides/:rideId/capacity', validate(driverCapacitySchema), driverController.updateCapacity);
 router.get('/rides/:rideId', driverController.getRide);
 router.get('/rides/:rideId/passengers', driverController.getPassengers);
+router.post(
+  '/rides/:rideId/passengers',
+  validate(driverPassengerSchema),
+  driverController.addPassenger
+);
+router.patch(
+  '/passengers/:passengerId',
+  validate(driverUpdatePassengerSchema),
+  driverController.updatePassenger
+);
 router.patch(
   '/rides/:rideId/status',
   validate(driverStatusSchema),
   driverController.updateStatus
+);
+router.post(
+  '/rides/:rideId/void',
+  validate(driverVoidRideSchema),
+  driverController.voidRide
 );
 
 export default router;

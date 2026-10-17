@@ -24,6 +24,7 @@ const stopSchema = new mongoose.Schema(
 
 const routeSchema = new mongoose.Schema(
   {
+    name: { type: String, default: '', trim: true, maxlength: 120 },
     origin: { type: placeSchema, required: true },
     destination: { type: placeSchema, required: true },
     stops: { type: [stopSchema], default: [] },

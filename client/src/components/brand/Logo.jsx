@@ -10,11 +10,12 @@ const heights = {
 const LIGHT_LOGO = '/brand/raahix-lockup.png';
 const DARK_LOGO = '/brand/raahix-lockup-dark.png?v=3';
 
-export default function Logo({ className, size = 'md' }) {
+export default function Logo({ className, size = 'md', onDark }) {
   const { isDark } = useTheme();
+  const useDarkAsset = onDark === true || (onDark !== false && isDark);
   return (
     <img
-      src={isDark ? DARK_LOGO : LIGHT_LOGO}
+      src={useDarkAsset ? DARK_LOGO : LIGHT_LOGO}
       alt="RaahiX"
       width={2172}
       height={724}

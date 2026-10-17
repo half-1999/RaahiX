@@ -225,7 +225,7 @@ export async function updateRide(rideId, updates, actor) {
     status: ride.status,
   };
 
-  if (updates.status === RIDE_STATUS.CANCELLED) {
+  if (updates.status === 'CANCELLED' || updates.void === true) {
     return cancelRide(rideId, actor, updates.reason);
   }
 
@@ -309,24 +309,32 @@ export async function cancelRide(rideId, actor, reason) {
   if (!ride) {
     throw new AppError('Ride not found', { code: ErrorCodes.RIDE_NOT_FOUND, statusCode: 404 });
   }
-  if (ride.status === RIDE_STATUS.CANCELLED) {
+  if (ride.voidedAt) {
     return ride;
   }
-  if (ride.status === RIDE_STATUS.COMPLETED || ride.status === RIDE_STATUS.STARTED) {
-    throw new AppError('Cannot cancel a started or completed ride', {
+  if (ride.status === RIDE_STATUS.COMPLETED || ride.status === RIDE_STATUS.ACTIVE) {
+    throw new AppError('Cannot void an active or completed ride', {
       code: ErrorCodes.VALIDATION_ERROR,
       statusCode: 400,
     });
   }
 
   const oldStatus = ride.status;
-  ride.status = RIDE_STATUS.CANCELLED;
+  ride.voidedAt = new Date();
+  ride.voidedReason = why;
+  ride.statusHistory = ride.statusHistory || [];
+  ride.statusHistory.push({
+    fromStatus: oldStatus,
+    toStatus: oldStatus,
+    source: 'MANUAL',
+    at: new Date(),
+    note: `Voided: ${why}`,
+  });
   await ride.save();
 
   const { cancelBookingsForRide } = await import('./bookingService.js');
   await cancelBookingsForRide(ride, { reason: why });
 
-  // Release any remaining holds on the ride
   for (const seat of ride.seats) {
     if (seat.status === SEAT_STATUS.HELD) {
       await releaseHold(seat.holdId);
@@ -336,15 +344,15 @@ export async function cancelRide(rideId, actor, reason) {
   await writeAudit({
     actorId: actor._id,
     actorRole: actor.role,
-    action: 'RIDE_CANCELLED',
+    action: 'RIDE_VOIDED',
     entityType: 'Ride',
     entityId: ride._id,
-    oldValue: { status: oldStatus },
-    newValue: { status: RIDE_STATUS.CANCELLED },
+    oldValue: { status: oldStatus, voidedAt: null },
+    newValue: { status: ride.status, voidedAt: ride.voidedAt },
     reason: why,
   });
 
-  logger.info('ride.cancelled', { rideId: ride._id.toString() });
+  logger.info('ride.voided', { rideId: ride._id.toString() });
   return Ride.findById(rideId);
 }
 
@@ -362,6 +370,7 @@ export async function search({ originCity, destinationCity, date, passengers = 1
   const dayEnd = endOfDay(date);
   const rides = await Ride.find({
     status: { $in: BOOKABLE_RIDE_STATUSES },
+    voidedAt: null,
     departureTime: { $gt: now, $gte: dayStart, $lte: dayEnd },
   })
     .populate('routeId')

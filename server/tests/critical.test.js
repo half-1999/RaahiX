@@ -433,7 +433,7 @@ describe('Driver ride lifecycle', () => {
     return { departureTime: departureTime.toISOString(), arrivalTime: arrivalTime.toISOString() };
   }
 
-  test('verified drivers publish through a controlled lifecycle and cannot shrink committed seats', async () => {
+  test('verified drivers schedule through a controlled lifecycle and cannot shrink committed seats', async () => {
     const fixture = await seedRideFixture();
     const session = await loginAs(fixture.driverUser.email);
     const createdVehicle = await request(app)
@@ -447,7 +447,7 @@ describe('Driver ride lifecycle', () => {
       });
     expect(createdVehicle.status).toBe(201);
 
-    const draft = await request(app)
+    const created = await request(app)
       .post('/api/driver/rides')
       .set(authHeader(session.accessToken))
       .send({
@@ -457,15 +457,9 @@ describe('Driver ride lifecycle', () => {
         capacity: 6,
         ...times(),
       });
-    expect(draft.status).toBe(201);
-    expect(draft.body.data.ride.status).toBe('DRAFT');
-    const rideId = draft.body.data.ride._id;
-
-    const published = await request(app)
-      .patch(`/api/driver/rides/${rideId}/status`)
-      .set(authHeader(session.accessToken))
-      .send({ status: 'PUBLISHED' });
-    expect(published.status).toBe(200);
+    expect(created.status).toBe(201);
+    expect(created.body.data.ride.status).toBe('SCHEDULED');
+    const rideId = created.body.data.ride._id;
 
     const active = await request(app)
       .patch(`/api/driver/rides/${rideId}/status`)
@@ -478,18 +472,21 @@ describe('Driver ride lifecycle', () => {
       .set(authHeader(session.accessToken))
       .send({ status: 'COMPLETED' });
     expect(completed.status).toBe(200);
+    expect(completed.body.data.ride.actualCompletedAt).toBeTruthy();
 
     const backward = await request(app)
       .patch(`/api/driver/rides/${rideId}/status`)
       .set(authHeader(session.accessToken))
-      .send({ status: 'PUBLISHED' });
+      .send({ status: 'ACTIVE' });
     expect(backward.status).toBe(400);
 
     const ride = await Ride.findById(rideId);
     ride.seats.forEach((seat, index) => {
       if (index < 5) seat.status = SEAT_STATUS.BOOKED;
     });
-    ride.status = 'PUBLISHED';
+    ride.status = 'SCHEDULED';
+    ride.actualCompletedAt = null;
+    ride.voidedAt = null;
     await ride.save();
 
     const shrink = await request(app)
@@ -513,14 +510,15 @@ describe('Driver ride lifecycle', () => {
     expect(denied.body.code).toBe('DRIVER_NOT_VERIFIED');
   });
 
-  test('cancelled rides cannot become active', async () => {
+  test('voided rides cannot become active', async () => {
     const fixture = await seedRideFixture();
     const session = await loginAs(fixture.driverUser.email);
-    const cancelled = await request(app)
-      .patch(`/api/driver/rides/${fixture.ride._id}/status`)
+    const voided = await request(app)
+      .post(`/api/driver/rides/${fixture.ride._id}/void`)
       .set(authHeader(session.accessToken))
-      .send({ status: 'CANCELLED' });
-    expect(cancelled.status).toBe(200);
+      .send({ reason: 'Test void' });
+    expect(voided.status).toBe(200);
+    expect(voided.body.data.ride.voidedAt).toBeTruthy();
 
     const revived = await request(app)
       .patch(`/api/driver/rides/${fixture.ride._id}/status`)
@@ -575,11 +573,7 @@ describe('Ride segments', () => {
     expect(draft.body.data.ride.rideStops[3].dropAllowed).toBe(true);
 
     const rideId = draft.body.data.ride._id;
-    const published = await request(app)
-      .patch(`/api/driver/rides/${rideId}/status`)
-      .set(authHeader(driver.accessToken))
-      .send({ status: 'PUBLISHED' });
-    expect(published.status).toBe(200);
+    expect(draft.body.data.ride.status).toBe('SCHEDULED');
 
     const search = await request(app).get('/api/rides/search').query({
       originCity: 'Delhi',
@@ -666,10 +660,7 @@ describe('Segment inventory', () => {
         arrivalTime: new Date(departureTime.getTime() + 6 * 60 * 60 * 1000).toISOString(),
       });
     const rideId = draft.body.data.ride._id;
-    await request(app)
-      .patch(`/api/driver/rides/${rideId}/status`)
-      .set(authHeader(session.accessToken))
-      .send({ status: 'PUBLISHED' });
+    expect(draft.body.data.ride.status).toBe('SCHEDULED');
     return {
       rideId,
       date: departureTime.toISOString().slice(0, 10),
@@ -825,10 +816,7 @@ describe('Direct payment, refunds, audit, and notifications', () => {
         arrivalTime: new Date(departureTime.getTime() + 6 * 60 * 60 * 1000).toISOString(),
       });
     const rideId = draft.body.data.ride._id;
-    await request(app)
-      .patch(`/api/driver/rides/${rideId}/status`)
-      .set(authHeader(driver.accessToken))
-      .send({ status: 'PUBLISHED' });
+    expect(draft.body.data.ride.status).toBe('SCHEDULED');
     await request(app)
       .patch('/api/driver/payment-details')
       .set(authHeader(driver.accessToken))
@@ -923,9 +911,10 @@ describe('Direct payment, refunds, audit, and notifications', () => {
       .post(`/api/bookings/${late.booking._id}/payment-proof`)
       .set(authHeader(late.customer.accessToken))
       .send({ screenshot: PROOF_PNG });
+    const expiredAt = new Date(Date.now() - 60 * 1000);
     await Booking.updateOne(
       { _id: late.booking._id },
-      { $set: { holdExpiresAt: new Date(Date.now() - 60 * 1000) } }
+      { $set: { holdExpiresAt: expiredAt, verificationHoldUntil: expiredAt } }
     );
     const review = await request(app)
       .post(`/api/driver/bookings/${late.booking._id}/review`)
@@ -995,7 +984,10 @@ describe('Direct payment, refunds, audit, and notifications', () => {
       .send({});
     expect(noneCancel.body.data.booking.refundAmount).toBe(0);
     expect(noneCancel.body.data.booking.refundStatus).toBe('NOT_APPLICABLE');
-    expect(await Payment.countDocuments({ bookingId: none.booking._id })).toBe(0);
+    // Manual UPI proof creates a Payment row; near-departure cancel owes ₹0 refund, not a payout.
+    expect(await Payment.countDocuments({ bookingId: none.booking._id })).toBe(1);
+    const nonePay = await Payment.findOne({ bookingId: none.booking._id });
+    expect(nonePay.paymentReference).toMatch(/^RAAHIX/);
 
     const kept = await Booking.findById(full.booking._id);
     expect(kept).toBeTruthy();
@@ -1028,10 +1020,11 @@ describe('Direct payment, refunds, audit, and notifications', () => {
       .set(authHeader(rideCancel.driver.accessToken))
       .send({ decision: 'APPROVE' });
     const cancelledRide = await request(app)
-      .patch(`/api/driver/rides/${rideCancel.rideId}/status`)
+      .post(`/api/driver/rides/${rideCancel.rideId}/void`)
       .set(authHeader(rideCancel.driver.accessToken))
-      .send({ status: 'CANCELLED' });
+      .send({ reason: 'Driver voided the ride for test' });
     expect(cancelledRide.status).toBe(200);
+    expect(cancelledRide.body.data.ride.voidedAt).toBeTruthy();
     const history = await Booking.findById(rideCancel.booking._id);
     expect(history.bookingStatus).toBe('CANCELLED');
     expect(history.refundAmount).toBe(rideCancel.booking.totalAmount);

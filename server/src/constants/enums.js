@@ -33,21 +33,49 @@ export const ROUTE_STATUS = Object.freeze({
   INACTIVE: 'INACTIVE',
 });
 
+/** Canonical ride statuses only — UI and automation use these three. */
 export const RIDE_STATUS = Object.freeze({
-  DRAFT: 'DRAFT',
-  PUBLISHED: 'PUBLISHED',
-  ACTIVE: 'ACTIVE',
   SCHEDULED: 'SCHEDULED',
-  BOARDING: 'BOARDING',
-  STARTED: 'STARTED',
+  ACTIVE: 'ACTIVE',
   COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED',
 });
 
-export const BOOKABLE_RIDE_STATUSES = Object.freeze([
-  RIDE_STATUS.PUBLISHED,
-  RIDE_STATUS.SCHEDULED,
-]);
+export const BOOKABLE_RIDE_STATUSES = Object.freeze([RIDE_STATUS.SCHEDULED]);
+
+export const RIDE_STATUS_CHANGE_SOURCE = Object.freeze({
+  AUTOMATIC: 'AUTOMATIC',
+  MANUAL: 'MANUAL',
+});
+
+/** Map legacy statuses (pre three-status model) onto the canonical set. */
+export function mapLegacyRideStatus(status) {
+  switch (String(status || '').toUpperCase()) {
+    case 'ACTIVE':
+    case 'BOARDING':
+    case 'STARTED':
+    case 'IN_PROGRESS':
+    case 'IN-PROGRESS':
+      return RIDE_STATUS.ACTIVE;
+    case 'COMPLETED':
+    case 'FINISHED':
+      return RIDE_STATUS.COMPLETED;
+    case 'CANCELLED':
+    case 'CANCELED':
+      return RIDE_STATUS.COMPLETED;
+    case 'DRAFT':
+    case 'PUBLISHED':
+    case 'PENDING':
+    case 'UPCOMING':
+    case 'SCHEDULED':
+    default:
+      return RIDE_STATUS.SCHEDULED;
+  }
+}
+
+export function wasLegacyCancelled(status) {
+  const s = String(status || '').toUpperCase();
+  return s === 'CANCELLED' || s === 'CANCELED';
+}
 
 export const SEAT_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE',
@@ -91,6 +119,12 @@ export const PAYMENT_STATUS = Object.freeze({
   SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
   REFUNDED: 'REFUNDED',
+});
+
+export const GUEST_PAYMENT_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PARTIAL: 'PARTIAL',
+  PAID: 'PAID',
 });
 
 export const NOTIFICATION_CHANNEL = Object.freeze({

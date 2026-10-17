@@ -10,6 +10,7 @@ import { ErrorCodes } from '../constants/errorCodes.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
 import { getGateway } from './payment/gateway.js';
+import { nextPaymentReference } from '../models/Counter.js';
 import * as notificationService from './notificationService.js';
 
 async function confirmPaymentSuccess({ payment, booking, gatewayPaymentId, gatewaySignature, raw }) {
@@ -137,9 +138,14 @@ export async function createOrder(userId, { bookingId }) {
         gatewayOrderId: order.id,
       });
     } else {
+      if (!booking.paymentReference) {
+        booking.paymentReference = await nextPaymentReference();
+        await booking.save();
+      }
       payment = await Payment.create({
         bookingId: booking._id,
         userId,
+        paymentReference: booking.paymentReference,
         amount: booking.totalAmount,
         currency: booking.currency || 'INR',
         gateway: gateway.name,

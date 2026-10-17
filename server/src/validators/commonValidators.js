@@ -90,40 +90,74 @@ export const verifyPaymentSchema = z.object({
 });
 
 export const driverStatusSchema = z.object({
-  status: z.enum([
-    RIDE_STATUS.PUBLISHED,
-    RIDE_STATUS.ACTIVE,
-    RIDE_STATUS.COMPLETED,
-    RIDE_STATUS.CANCELLED,
-    RIDE_STATUS.BOARDING,
-    RIDE_STATUS.STARTED,
-  ]),
+  status: z.enum([RIDE_STATUS.ACTIVE, RIDE_STATUS.COMPLETED]),
 });
 
-export const driverRideSchema = z.object({
-  routeId: objectId,
-  vehicleId: objectId,
-  departureTime: z.string().min(1),
-  arrivalTime: z.string().min(1),
-  pricePerSeat: z.number().min(1),
-  frontSeatPrice: z.number().min(0).optional(),
-  capacity: z.number().int().min(1).max(6).optional(),
-  pickupPoint: z.string().min(1).optional(),
-  dropPoint: z.string().min(1).optional(),
-  pickupPoints: z.array(z.string().min(1)).max(2).optional(),
-  dropPoints: z.array(z.string().min(1)).max(2).optional(),
+export const driverVoidRideSchema = z.object({
+  reason: z.string().min(3).max(300).optional(),
 });
+
+export const driverRideSchema = z
+  .object({
+    routeId: objectId.optional(),
+    sourceLocationId: objectId.optional(),
+    destinationLocationId: objectId.optional(),
+    origin: placeSchema.optional(),
+    destination: placeSchema.optional(),
+    vehicleId: objectId,
+    departureTime: z.string().min(1),
+    arrivalTime: z.string().min(1).optional(),
+    estimatedDurationMinutes: z.number().int().min(1).max(10080).optional(),
+    pricePerSeat: z.number().min(1),
+    frontSeatPrice: z.number().min(0).optional(),
+    capacity: z.number().int().min(1).max(6).optional(),
+    pickupPoint: z.string().min(1).optional(),
+    dropPoint: z.string().min(1).optional(),
+    pickupPoints: z.array(z.string().min(1)).max(2).optional(),
+    dropPoints: z.array(z.string().min(1)).max(2).optional(),
+    notes: z.string().max(500).optional(),
+  })
+  .refine((data) => data.arrivalTime || data.estimatedDurationMinutes, {
+    message: 'Provide arrivalTime or estimatedDurationMinutes',
+  })
+  .refine((data) => data.routeId || data.sourceLocationId || data.origin, {
+    message: 'Provide a route or source location',
+  });
 
 export const driverUpdateRideSchema = z.object({
   departureTime: z.string().min(1).optional(),
   arrivalTime: z.string().min(1).optional(),
+  estimatedDurationMinutes: z.number().int().min(1).max(10080).optional(),
   pricePerSeat: z.number().min(1).optional(),
   frontSeatPrice: z.number().min(0).nullable().optional(),
   pickupPoint: z.string().min(1).optional(),
   dropPoint: z.string().min(1).optional(),
   pickupPoints: z.array(z.string().min(1)).max(2).optional(),
   dropPoints: z.array(z.string().min(1)).max(2).optional(),
+  notes: z.string().max(500).nullable().optional(),
 });
+
+export const driverPassengerSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().min(8).max(20).optional(),
+  email: z.string().email().optional(),
+  seatCount: z.number().int().min(1).max(6).optional(),
+  seatNumbers: z.array(z.string()).optional(),
+  fareAmount: z.number().min(0).optional(),
+  amountCollected: z.number().min(0).optional(),
+  paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID']).optional(),
+  paymentMethod: z.string().max(60).optional(),
+  paymentReference: z.string().max(120).optional(),
+  pickupName: z.string().max(120).optional(),
+  dropName: z.string().max(120).optional(),
+  pickupLocationId: objectId.optional(),
+  dropLocationId: objectId.optional(),
+  pickup: placeSchema.optional(),
+  drop: placeSchema.optional(),
+  notes: z.string().max(500).optional(),
+});
+
+export const driverUpdatePassengerSchema = driverPassengerSchema.partial();
 
 export const driverCapacitySchema = z.object({
   capacity: z.number().int().min(1).max(6),
@@ -168,17 +202,19 @@ export const driverVehicleSchema = createVehicleSchema.omit({ driverId: true });
 export const driverUpdateVehicleSchema = updateVehicleSchema.omit({ driverId: true });
 
 export const createRouteSchema = z.object({
+  name: z.string().max(120).optional(),
   origin: placeSchema,
   destination: placeSchema,
   stops: z.array(stopSchema).optional(),
-  estimatedDuration: z.number().int().min(1),
+  estimatedDuration: z.number().int().min(1).max(10080),
   status: z.enum(Object.values(ROUTE_STATUS)).optional(),
 });
 
 export const updateRouteSchema = createRouteSchema.partial();
 
 export const driverRouteSchema = z.object({
-  estimatedDuration: z.number().int().min(1),
+  name: z.string().max(120).optional(),
+  estimatedDuration: z.number().int().min(1).max(10080),
   stops: z
     .array(
       z.object({
@@ -188,7 +224,10 @@ export const driverRouteSchema = z.object({
       })
     )
     .min(2),
+  status: z.enum(Object.values(ROUTE_STATUS)).optional(),
 });
+
+export const driverUpdateRouteSchema = driverRouteSchema.partial();
 
 export const updateLocationSchema = z.object({
   name: z.string().min(1).optional(),
@@ -222,7 +261,8 @@ export const updateRideSchema = z.object({
   pickupPoint: z.string().optional(),
   dropPoint: z.string().optional(),
   pricePerSeat: z.number().min(1).optional(),
-  status: z.enum(Object.values(RIDE_STATUS)).optional(),
+  status: z.enum([...Object.values(RIDE_STATUS), 'CANCELLED']).optional(),
+  void: z.boolean().optional(),
   reason: z.string().min(3),
 });
 

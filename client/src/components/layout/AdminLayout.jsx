@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import Logo from '../brand/Logo';
-import ThemeToggle from '../brand/ThemeToggle';
+import ProfileMenu from './ProfileMenu';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 
@@ -33,7 +33,7 @@ const links = [
 ];
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   const nav = (
@@ -85,13 +85,10 @@ export default function AdminLayout() {
               </p>
             </div>
             <div className="flex items-center gap-3 text-sm">
-              <ThemeToggle />
               <Link to="/" className="text-ink-muted hover:text-ink">
                 Site
               </Link>
-              <button type="button" className="text-ink-muted hover:text-ink" onClick={() => logout()}>
-                Log out
-              </button>
+              <ProfileMenu />
             </div>
           </header>
 

@@ -194,7 +194,7 @@ export async function deactivateOwnVehicle(userId, vehicleId, actor) {
   const { vehicle } = await ownVehicle(userId, vehicleId);
   const futureRide = await Ride.findOne({
     vehicleId: vehicle._id,
-    status: { $ne: RIDE_STATUS.CANCELLED },
+    voidedAt: null,
     departureTime: { $gte: new Date() },
   }).select('_id');
 

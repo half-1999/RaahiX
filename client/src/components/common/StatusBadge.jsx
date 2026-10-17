@@ -1,30 +1,38 @@
 import Badge from '../ui/Badge';
 
 const bookingMap = {
-  PENDING: { tone: 'warning', label: 'Pending' },
+  PENDING: { tone: 'pending', label: 'Pending' },
   CONFIRMED: { tone: 'success', label: 'Confirmed' },
-  CANCELLED: { tone: 'danger', label: 'Cancelled' },
-  EXPIRED: { tone: 'neutral', label: 'Expired' },
+  CANCELLED: { tone: 'cancelled', label: 'Cancelled' },
+  EXPIRED: { tone: 'completed', label: 'Expired' },
 };
 
 const paymentMap = {
-  PENDING: { tone: 'warning', label: 'Pending' },
+  PENDING: { tone: 'pending', label: 'Pending' },
+  SUBMITTED: { tone: 'pending', label: 'Submitted' },
+  APPROVED: { tone: 'success', label: 'Approved' },
+  REJECTED: { tone: 'failed', label: 'Rejected' },
   PAID: { tone: 'success', label: 'Paid' },
-  FAILED: { tone: 'danger', label: 'Failed' },
-  REFUNDED: { tone: 'neutral', label: 'Refunded' },
-  CREATED: { tone: 'neutral', label: 'Created' },
+  FAILED: { tone: 'failed', label: 'Failed' },
+  REFUNDED: { tone: 'completed', label: 'Refunded' },
+  CREATED: { tone: 'draft', label: 'Created' },
   SUCCESS: { tone: 'success', label: 'Success' },
+  PARTIAL: { tone: 'pending', label: 'Partial' },
+  COMPLETED: { tone: 'completed', label: 'Completed' },
+  WAIVED: { tone: 'completed', label: 'Waived' },
+  NOT_APPLICABLE: { tone: 'draft', label: 'N/A' },
 };
 
 const rideMap = {
-  DRAFT: { tone: 'neutral', label: 'Draft' },
-  PUBLISHED: { tone: 'brand', label: 'Published' },
-  ACTIVE: { tone: 'accent', label: 'Active' },
-  SCHEDULED: { tone: 'brand', label: 'Scheduled' },
-  BOARDING: { tone: 'accent', label: 'Boarding' },
-  STARTED: { tone: 'warning', label: 'Started' },
-  COMPLETED: { tone: 'success', label: 'Completed' },
-  CANCELLED: { tone: 'danger', label: 'Cancelled' },
+  SCHEDULED: { tone: 'scheduled', label: 'Scheduled' },
+  ACTIVE: { tone: 'active', label: 'Active' },
+  COMPLETED: { tone: 'completed', label: 'Completed' },
+  // Legacy labels still render safely if old data appears before migration
+  DRAFT: { tone: 'scheduled', label: 'Scheduled' },
+  PUBLISHED: { tone: 'scheduled', label: 'Scheduled' },
+  BOARDING: { tone: 'active', label: 'Active' },
+  STARTED: { tone: 'active', label: 'Active' },
+  CANCELLED: { tone: 'cancelled', label: 'Voided' },
 };
 
 const maps = {
@@ -33,8 +41,12 @@ const maps = {
   ride: rideMap,
 };
 
-export default function StatusBadge({ status, type = 'booking' }) {
+export default function StatusBadge({ status, type = 'booking', className }) {
   const map = maps[type] || bookingMap;
   const meta = map[status] || { tone: 'neutral', label: status || '—' };
-  return <Badge tone={meta.tone}>{meta.label}</Badge>;
+  return (
+    <Badge tone={meta.tone} className={className}>
+      {meta.label}
+    </Badge>
+  );
 }

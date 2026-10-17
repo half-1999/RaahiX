@@ -8,19 +8,19 @@ Shehar Se Shehar, Saath Safar. A product by The Stack Guy.
 
 The light theme uses `client/public/brand/raahix-lockup.png` (charcoal mark on light). The dark theme uses `client/public/brand/raahix-lockup-dark.png` (white Roadway lockup on dark). Do not redraw either file, crop it, or substitute another mark.
 
-The product opens in the light theme. Pages, cards, navigation, and dashboards use white and warm off-white until the visitor chooses Dark. Gold is the action color. Text on gold is charcoal, because white on gold is hard to read.
+The product opens in the light theme. Pages, cards, navigation, and dashboards use white and warm off-white until the visitor chooses Dark. Primary yellow is the action color. Text on yellow is charcoal, because white on yellow is hard to read.
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| Page | `#F7F6F3` | App background |
+| Page | `#F5F3EC` | App background |
 | Surface | `#FFFFFF` | Cards, navigation, dialogs |
-| Text | `#242220` | Primary text and text on gold buttons |
-| Muted | `#5C5F66` | Secondary text |
-| Gold | `#E5AC32` | Primary buttons |
-| Gold text | `#7A5610` | Small gold labels on white |
-| Line | `#E6E4DE` | Borders |
+| Text | `#171717` | Primary text and text on yellow buttons |
+| Muted | `#737373` | Secondary text |
+| Yellow | `#FFD43B` | Primary buttons and accents |
+| Yellow text | `#8A6D00` | Small yellow labels on white |
+| Line | `#E8E5DE` | Borders |
 
-Type is Syne for headings and Manrope for body.
+Type is Syne for headings, Manrope for body, and Aston Script (with Great Vibes as the licensed fallback) for short brand accents only.
 
 This is a scheduled seat marketplace. It is not instant taxi hailing, centralized dispatch, peer-to-peer carpooling, or live driver tracking.
 

@@ -14,8 +14,11 @@ const passengerSchema = new mongoose.Schema(
 const bookingSchema = new mongoose.Schema(
   {
     bookingNumber: { type: String, required: true, unique: true },
+    paymentReference: { type: String, default: null },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     rideId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ride', required: true },
+    isSeed: { type: Boolean, default: false },
+    verificationHoldUntil: { type: Date, default: null },
     pickupLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null },
     dropLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null },
     pickupName: { type: String, default: null },
@@ -73,6 +76,7 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.index({ userId: 1, createdAt: -1 });
 bookingSchema.index({ rideId: 1 });
 bookingSchema.index({ bookingStatus: 1, paymentStatus: 1 });
+bookingSchema.index({ paymentReference: 1 }, { sparse: true });
 bookingSchema.index({ holdExpiresAt: 1 }, { sparse: true });
 
 export const Booking = mongoose.model('Booking', bookingSchema);

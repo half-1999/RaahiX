@@ -30,7 +30,7 @@ export default function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-semibold transition duration-200 focus-visible:outline-none',
+        'inline-flex cursor-pointer items-center justify-center gap-2 font-semibold transition duration-200 focus-visible:outline-none disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],
         className

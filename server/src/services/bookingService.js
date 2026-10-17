@@ -340,14 +340,8 @@ export async function cancel(bookingId, requester, { reason } = {}) {
   }
 
   const ride = booking.rideId;
-  if (
-    ride &&
-    (ride.status === RIDE_STATUS.STARTED ||
-      ride.status === RIDE_STATUS.COMPLETED ||
-      ride.status === RIDE_STATUS.BOARDING ||
-      ride.status === RIDE_STATUS.ACTIVE)
-  ) {
-    throw new AppError('Booking cannot be cancelled after boarding has started', {
+  if (ride && (ride.status === RIDE_STATUS.COMPLETED || ride.status === RIDE_STATUS.ACTIVE)) {
+    throw new AppError('Booking cannot be cancelled after the ride has started', {
       code: ErrorCodes.BOOKING_NOT_CANCELLABLE,
       statusCode: 400,
     });
@@ -460,7 +454,7 @@ export async function cancelBookingsForRide(ride, { reason, actor }) {
       action: 'RIDE_CANCELLED',
       entityType: 'Ride',
       entityId: ride._id,
-      newValue: { status: RIDE_STATUS.CANCELLED, bookings: bookings.length },
+      newValue: { voided: true, bookings: bookings.length },
       reason: reason || null,
     });
   }

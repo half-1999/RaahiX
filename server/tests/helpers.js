@@ -63,10 +63,17 @@ export async function createUser({
   phone,
   password = 'Password@123',
   role = ROLES.CUSTOMER,
+  username,
 } = {}) {
+  const local = String(email || 'user')
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 16);
   return User.create({
     name,
     email: email.toLowerCase(),
+    username: (username || `${local}${Date.now().toString(36).slice(-4)}`).toLowerCase(),
     phone,
     passwordHash: await bcrypt.hash(password, 10),
     role,
@@ -119,6 +126,7 @@ export async function seedRideFixture() {
     name: driverUser.name,
     phone: driverUser.phone,
     licenseNumber: 'LIC-001',
+    upiId: 'driver1@upi',
     verificationStatus: DRIVER_VERIFICATION.VERIFIED,
     status: DRIVER_STATUS.ACTIVE,
   });
@@ -128,6 +136,7 @@ export async function seedRideFixture() {
     name: otherDriverUser.name,
     phone: otherDriverUser.phone,
     licenseNumber: 'LIC-002',
+    upiId: 'driver2@upi',
     verificationStatus: DRIVER_VERIFICATION.VERIFIED,
     status: DRIVER_STATUS.ACTIVE,
   });

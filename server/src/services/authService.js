@@ -20,14 +20,64 @@ import {
   verifyRefreshToken,
 } from '../utils/tokens.js';
 import { logger } from '../utils/logger.js';
-import { resolveVehicleSeats } from '../utils/vehicleLayouts.js';
+import { ensureUserUsername, generateUniqueUsername } from '../utils/username.js';
 
 async function issueTokens(user) {
+  // Older accounts may not have username yet — set it before save or login fails validation.
+  await ensureUserUsername(user, { save: false });
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user);
   user.refreshTokenHash = await hashToken(refreshToken);
   await user.save();
-  return { accessToken, refreshToken, user: user.toSafeObject() };
+  return { accessToken, refreshToken, user: await buildProfilePayload(user) };
+}
+
+async function buildDriverProfile(userId) {
+  const driver = await Driver.findOne({ userId });
+  if (!driver) return null;
+  const vehicleCount = await Vehicle.countDocuments({
+    driverId: driver._id,
+    status: VEHICLE_STATUS.ACTIVE,
+  });
+  const missing = [];
+  if (!driver.licenseNumber || String(driver.licenseNumber).trim().length < 5) {
+    missing.push('license');
+  }
+  if (!driver.upiId || String(driver.upiId).trim().length < 3) {
+    missing.push('upi');
+  }
+  if (vehicleCount < 1) missing.push('vehicle');
+  if (driver.verificationStatus !== DRIVER_VERIFICATION.VERIFIED) {
+    missing.push('verification');
+  }
+
+  return {
+    id: driver._id.toString(),
+    licenseNumber: driver.licenseNumber || '',
+    verificationStatus: driver.verificationStatus,
+    status: driver.status,
+    upiId: driver.upiId || '',
+    paymentInstructions: driver.paymentInstructions || '',
+    rating: driver.rating,
+    totalTrips: driver.totalTrips,
+    vehicleCount,
+    profileComplete: driver.isProfileComplete({ vehicleCount }),
+    canPostRides:
+      driver.isProfileComplete({ vehicleCount }) &&
+      driver.verificationStatus === DRIVER_VERIFICATION.VERIFIED &&
+      driver.status === DRIVER_STATUS.ACTIVE,
+    missing,
+  };
+}
+
+async function buildProfilePayload(user) {
+  await ensureUserUsername(user);
+  const base = user.toSafeObject();
+  if (user.role !== ROLES.DRIVER) return base;
+  return {
+    ...base,
+    driverProfile: await buildDriverProfile(user._id),
+  };
 }
 
 export async function register({ name, email, phone, password }) {
@@ -39,8 +89,10 @@ export async function register({ name, email, phone, password }) {
     });
   }
 
+  const username = await generateUniqueUsername({ name, email });
   const user = await User.create({
     name,
+    username,
     email: email.toLowerCase(),
     phone,
     passwordHash: await hashPassword(password),
@@ -48,11 +100,11 @@ export async function register({ name, email, phone, password }) {
     status: USER_STATUS.ACTIVE,
   });
 
-  logger.info('auth.register', { userId: user._id.toString(), role: ROLES.CUSTOMER });
+  logger.info('auth.register', { userId: user._id.toString(), role: ROLES.CUSTOMER, username });
   return issueTokens(user);
 }
 
-export async function registerDriver({ name, email, phone, password, licenseNumber, vehicle }) {
+export async function registerDriver({ name, email, phone, password }) {
   const existing = await User.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
   if (existing) {
     throw new AppError('Email or phone already registered', {
@@ -61,28 +113,10 @@ export async function registerDriver({ name, email, phone, password, licenseNumb
     });
   }
 
-  const existingLicense = await Driver.findOne({ licenseNumber: licenseNumber.trim().toUpperCase() });
-  if (existingLicense) {
-    throw new AppError('License number already registered', {
-      code: ErrorCodes.CONFLICT,
-      statusCode: 409,
-    });
-  }
-
-  const existingReg = await Vehicle.findOne({
-    registrationNumber: vehicle.registrationNumber.toUpperCase().trim(),
-  });
-  if (existingReg) {
-    throw new AppError('Vehicle registration already registered', {
-      code: ErrorCodes.CONFLICT,
-      statusCode: 409,
-    });
-  }
-
-  const seats = resolveVehicleSeats(vehicle);
-
+  const username = await generateUniqueUsername({ name, email });
   const user = await User.create({
     name,
+    username,
     email: email.toLowerCase(),
     phone,
     passwordHash: await hashPassword(password),
@@ -94,27 +128,15 @@ export async function registerDriver({ name, email, phone, password, licenseNumb
     userId: user._id,
     name,
     phone,
-    licenseNumber: licenseNumber.trim().toUpperCase(),
+    licenseNumber: null,
     verificationStatus: DRIVER_VERIFICATION.PENDING,
     status: DRIVER_STATUS.ACTIVE,
-  });
-
-  const cab = await Vehicle.create({
-    driverId: driver._id,
-    registrationNumber: vehicle.registrationNumber.toUpperCase().trim(),
-    make: vehicle.make,
-    model: vehicle.model,
-    vehicleType: seats.vehicleType,
-    capacity: seats.capacity,
-    seatConfiguration: seats.seatConfiguration,
-    features: vehicle.features || [],
-    status: VEHICLE_STATUS.ACTIVE,
   });
 
   logger.info('auth.register_driver', {
     userId: user._id.toString(),
     driverId: driver._id.toString(),
-    vehicleId: cab._id.toString(),
+    username,
   });
 
   const tokens = await issueTokens(user);
@@ -122,20 +144,18 @@ export async function registerDriver({ name, email, phone, password, licenseNumb
     ...tokens,
     driver: {
       id: driver._id.toString(),
-      licenseNumber: driver.licenseNumber,
       verificationStatus: driver.verificationStatus,
-    },
-    vehicle: {
-      id: cab._id.toString(),
-      registrationNumber: cab.registrationNumber,
-      make: cab.make,
-      model: cab.model,
+      profileComplete: false,
     },
   };
 }
 
 export async function login({ email, password }) {
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash +refreshTokenHash');
+  const identifier = String(email || '').trim().toLowerCase();
+  const user = await User.findOne({
+    $or: [{ email: identifier }, { username: identifier }],
+  }).select('+passwordHash +refreshTokenHash');
+
   if (!user) {
     throw new AppError('Invalid email or password', {
       code: ErrorCodes.AUTH_INVALID_CREDENTIALS,
@@ -224,10 +244,29 @@ export async function me(userId) {
   if (!user) {
     throw new AppError('User not found', { code: ErrorCodes.USER_NOT_FOUND, statusCode: 404 });
   }
-  return user.toSafeObject();
+  return buildProfilePayload(user);
 }
 
-export async function updateProfile(userId, { name, phone, password, currentPassword, payoutUpi, age }) {
+export async function updateProfile(
+  userId,
+  {
+    name,
+    phone,
+    password,
+    currentPassword,
+    payoutUpi,
+    age,
+    gender,
+    city,
+    state,
+    address,
+    bio,
+    dateOfBirth,
+    licenseNumber,
+    upiId,
+    paymentInstructions,
+  }
+) {
   const user = await User.findById(userId).select('+passwordHash');
   if (!user) {
     throw new AppError('User not found', { code: ErrorCodes.USER_NOT_FOUND, statusCode: 404 });
@@ -247,6 +286,14 @@ export async function updateProfile(userId, { name, phone, password, currentPass
   if (name) user.name = name.trim();
   if (payoutUpi !== undefined) user.payoutUpi = String(payoutUpi).trim();
   if (age !== undefined) user.age = age;
+  if (gender !== undefined) user.gender = gender;
+  if (city !== undefined) user.city = String(city).trim();
+  if (state !== undefined) user.state = String(state).trim();
+  if (address !== undefined) user.address = String(address).trim();
+  if (bio !== undefined) user.bio = String(bio).trim();
+  if (dateOfBirth !== undefined) {
+    user.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+  }
   if (phone) {
     const clash = await User.findOne({ phone, _id: { $ne: user._id } });
     if (clash) {
@@ -258,7 +305,38 @@ export async function updateProfile(userId, { name, phone, password, currentPass
     user.phone = phone.trim();
   }
 
+  await ensureUserUsername(user);
   await user.save();
+
+  if (user.role === ROLES.DRIVER) {
+    const driver = await Driver.findOne({ userId: user._id });
+    if (driver) {
+      if (name) driver.name = name.trim();
+      if (phone) driver.phone = phone.trim();
+      if (upiId !== undefined) driver.upiId = String(upiId).trim();
+      if (paymentInstructions !== undefined) {
+        driver.paymentInstructions = String(paymentInstructions).trim();
+      }
+      if (licenseNumber !== undefined) {
+        const nextLicense = String(licenseNumber).trim().toUpperCase();
+        if (nextLicense) {
+          const clash = await Driver.findOne({
+            licenseNumber: nextLicense,
+            _id: { $ne: driver._id },
+          });
+          if (clash) {
+            throw new AppError('License number already registered', {
+              code: ErrorCodes.CONFLICT,
+              statusCode: 409,
+            });
+          }
+          driver.licenseNumber = nextLicense;
+        }
+      }
+      await driver.save();
+    }
+  }
+
   logger.info('auth.profile_updated', { userId: user._id.toString() });
-  return user.toSafeObject();
+  return buildProfilePayload(user);
 }

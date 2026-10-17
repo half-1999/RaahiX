@@ -10,7 +10,8 @@ import { ErrorCodes } from '../constants/errorCodes.js';
 async function priorRide(userId, vehicleId) {
   const rides = await Ride.find({
     vehicleId,
-    status: { $nin: [RIDE_STATUS.CANCELLED, RIDE_STATUS.DRAFT] },
+    status: { $in: [RIDE_STATUS.SCHEDULED, RIDE_STATUS.ACTIVE, RIDE_STATUS.COMPLETED] },
+    voidedAt: null,
     departureTime: { $lt: new Date() },
   }).select('_id');
   if (!rides.length) return null;

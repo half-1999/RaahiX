@@ -3,6 +3,8 @@ import { config } from './config/index.js';
 import { connectDb } from './config/db.js';
 import { logger } from './utils/logger.js';
 import { startExpireHoldsJob } from './jobs/expireHolds.js';
+import { startRideLifecycleJob } from './jobs/rideLifecycle.js';
+import { migrateRideLifecycle } from './scripts/migrateRideLifecycle.js';
 import { User } from './models/User.js';
 import { runSeed } from './scripts/runSeed.js';
 
@@ -21,12 +23,18 @@ async function maybeSeed() {
 
 async function start() {
   await connectDb();
+  try {
+    await migrateRideLifecycle();
+  } catch (err) {
+    logger.error('migrate.ride_lifecycle_failed', { message: err.message });
+  }
   await maybeSeed();
 
   const server = app.listen(config.port, () => {
     logger.info('server.started', { port: config.port, env: config.env });
     if (config.env !== 'test') {
       startExpireHoldsJob();
+      startRideLifecycleJob();
     }
   });
 

@@ -50,6 +50,25 @@ export const createRoute = asyncHandler(async (req, res) => {
   success(res, { message: 'Route created', data: { route }, statusCode: 201 });
 });
 
+export const updateRoute = asyncHandler(async (req, res) => {
+  const route = await routeService.updateOwnRoute(
+    req.user._id,
+    req.params.routeId,
+    req.body,
+    req.user
+  );
+  success(res, { message: 'Route updated', data: { route } });
+});
+
+export const deactivateRoute = asyncHandler(async (req, res) => {
+  const route = await routeService.deactivateOwnRoute(
+    req.user._id,
+    req.params.routeId,
+    req.user
+  );
+  success(res, { message: 'Route deactivated', data: { route } });
+});
+
 export const dashboard = asyncHandler(async (req, res) => {
   const data = await driverOpsService.dashboard(req.user._id);
   success(res, { message: 'Driver dashboard fetched', data });
@@ -77,7 +96,44 @@ export const updateRide = asyncHandler(async (req, res) => {
 
 export const createRide = asyncHandler(async (req, res) => {
   const ride = await driverOpsService.createRide(req.user._id, req.body);
-  success(res, { message: 'Ride draft created', data: { ride }, statusCode: 201 });
+  success(res, { message: 'Ride scheduled', data: { ride }, statusCode: 201 });
+});
+
+export const todayReport = asyncHandler(async (req, res) => {
+  const data = await driverOpsService.todayReport(req.user._id, req.query);
+  success(res, { message: 'Today report fetched', data });
+});
+
+export const listAllPassengers = asyncHandler(async (req, res) => {
+  const data = await driverOpsService.listAllPassengers(req.user._id, req.query);
+  success(res, { message: 'Passengers fetched', data });
+});
+
+export const addPassenger = asyncHandler(async (req, res) => {
+  const passenger = await driverOpsService.addPassenger(
+    req.user._id,
+    req.params.rideId,
+    req.body
+  );
+  success(res, { message: 'Passenger added', data: { passenger }, statusCode: 201 });
+});
+
+export const updatePassenger = asyncHandler(async (req, res) => {
+  const passenger = await driverOpsService.updatePassenger(
+    req.user._id,
+    req.params.passengerId,
+    req.body
+  );
+  success(res, { message: 'Passenger updated', data: { passenger } });
+});
+
+export const voidRide = asyncHandler(async (req, res) => {
+  const ride = await driverOpsService.voidRide(
+    req.user._id,
+    req.params.rideId,
+    req.body.reason
+  );
+  success(res, { message: 'Ride voided', data: { ride } });
 });
 
 export const updateCapacity = asyncHandler(async (req, res) => {

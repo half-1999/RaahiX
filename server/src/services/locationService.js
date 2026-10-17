@@ -15,10 +15,10 @@ export function normalizePlaceName(value) {
     .trim();
 }
 
-export async function resolveLocation({ name, city, state }) {
+export async function resolveLocation({ name, city, state, country, latitude, longitude }, actor = null) {
   const normalizedName = normalizePlaceName(name || city);
-  const normalizedCity = normalizePlaceName(city);
-  const normalizedState = normalizePlaceName(state);
+  const normalizedCity = normalizePlaceName(city || name);
+  const normalizedState = normalizePlaceName(state || city || name);
 
   if (!normalizedName || !normalizedCity || !normalizedState) {
     throw new AppError('A location needs a name, city, and state', {
@@ -28,6 +28,7 @@ export async function resolveLocation({ name, city, state }) {
   }
 
   const existing = await Location.findOne({
+    isActive: { $ne: false },
     normalizedCity,
     normalizedState,
     $or: [{ normalizedName }, { aliases: normalizedName }],
@@ -37,12 +38,36 @@ export async function resolveLocation({ name, city, state }) {
   return Location.create({
     name: String(name || city).trim(),
     normalizedName,
-    city: String(city).trim(),
-    state: String(state).trim(),
+    city: String(city || name).trim(),
+    state: String(state || city || name).trim(),
+    country: country ? String(country).trim() : 'India',
     normalizedCity,
     normalizedState,
     aliases: [],
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
+    createdByUserId: actor?._id || null,
+    isActive: true,
   });
+}
+
+export async function searchLocations(q = '', { limit = 20 } = {}) {
+  await ensureCoreLocations();
+  const term = String(q || '').trim();
+  const filter = { isActive: { $ne: false } };
+  if (term) {
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ name: re }, { city: re }, { state: re }, { aliases: re }];
+  }
+  const locations = await Location.find(filter)
+    .sort({ city: 1, name: 1 })
+    .limit(Math.min(50, Number(limit) || 20));
+  return { locations };
+}
+
+export async function createLocation(input, actor) {
+  const location = await resolveLocation(input, actor);
+  return location;
 }
 
 export async function toPlace(input) {
@@ -55,8 +80,28 @@ export async function toPlace(input) {
   };
 }
 
+const CORE_CORRIDOR = [
+  { name: 'Richha', city: 'Richha', state: 'Uttar Pradesh' },
+  { name: 'Delhi', city: 'Delhi', state: 'Delhi' },
+  { name: 'Noida', city: 'Noida', state: 'Uttar Pradesh' },
+  { name: 'Gurugram', city: 'Gurugram', state: 'Haryana' },
+];
+
+export async function ensureCoreLocations() {
+  const results = [];
+  for (const place of CORE_CORRIDOR) {
+    results.push(await resolveLocation(place));
+  }
+  return results;
+}
+
 export async function listLocations() {
-  const locations = await Location.find().sort({ state: 1, city: 1, name: 1 });
+  await ensureCoreLocations();
+  const locations = await Location.find({ isActive: { $ne: false } }).sort({
+    state: 1,
+    city: 1,
+    name: 1,
+  });
   return { locations };
 }
 
@@ -109,6 +154,7 @@ export async function updateLocation(id, updates, actor) {
 }
 
 export async function listPublicCities() {
+  await ensureCoreLocations();
   const [locations, routes] = await Promise.all([
     Location.find().select('name city state').sort({ city: 1, name: 1 }).lean(),
     Route.find({ status: 'ACTIVE' }).select('origin destination stops').lean(),

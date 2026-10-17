@@ -50,7 +50,7 @@ export async function dashboard() {
     Driver.countDocuments(),
     Ride.countDocuments({
       departureTime: { $gte: from, $lte: to },
-      status: { $ne: RIDE_STATUS.CANCELLED },
+      voidedAt: null,
     }),
     Booking.countDocuments({
       createdAt: { $gte: from, $lte: to },
@@ -72,7 +72,7 @@ export async function dashboard() {
     Vehicle.countDocuments({ status: VEHICLE_STATUS.ACTIVE }),
     Ride.countDocuments({
       departureTime: { $gt: to },
-      status: { $ne: RIDE_STATUS.CANCELLED },
+      voidedAt: null,
     }),
     Booking.countDocuments({ bookingStatus: BOOKING_STATUS.PENDING }),
     Booking.countDocuments({ proofStatus: PROOF_STATUS.SUBMITTED }),

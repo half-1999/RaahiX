@@ -5,6 +5,7 @@ const paymentSchema = new mongoose.Schema(
   {
     bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    paymentReference: { type: String, unique: true, sparse: true },
     amount: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'INR' },
     gateway: { type: String, required: true },
@@ -16,6 +17,7 @@ const paymentSchema = new mongoose.Schema(
     refundAmount: { type: Number, default: undefined },
     refundedAt: { type: Date, default: undefined },
     rawResponse: { type: mongoose.Schema.Types.Mixed, default: undefined },
+    isSeed: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

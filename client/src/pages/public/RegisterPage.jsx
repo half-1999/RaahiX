@@ -1,43 +1,20 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CarFront, UserRound } from 'lucide-react';
+import { CarFront, LockKeyhole, Mail, Phone, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getErrorMessage } from '../../services/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
-import Badge from '../../components/ui/Badge';
 import { cn } from '../../utils/cn';
-import CabDetailsForm from '../../components/vehicles/CabDetailsForm';
-import Logo from '../../components/brand/Logo';
-import {
-  VEHICLE_TYPES,
-  capacityForType,
-  seatConfigurationForType,
-} from '../../utils/vehicleLayouts';
+import AuthShell from '../../components/auth/AuthShell';
+import { SignupWelcomeArt } from '../../components/landing/illustrations';
 
-const emptyCustomer = {
+const emptyForm = {
   name: '',
   email: '',
   phone: '',
   password: '',
-  confirmPassword: '',
-};
-
-const emptyDriver = {
-  name: '',
-  email: '',
-  phone: '',
-  password: '',
-  confirmPassword: '',
-  licenseNumber: '',
-  registrationNumber: '',
-  make: 'Maruti',
-  model: 'Dzire',
-  vehicleType: VEHICLE_TYPES.FIVE_SEATER,
-  features: ['AC', 'Charging'],
-  customMake: false,
-  customModel: false,
 };
 
 function accountErrors(fields) {
@@ -52,10 +29,7 @@ function accountErrors(fields) {
     errors.email = 'Enter a valid email';
   }
   if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(fields.password)) {
-    errors.password = 'Use at least 8 characters with a letter and a number';
-  }
-  if (fields.password !== fields.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match';
+    errors.password = 'Min 8 chars with a letter and number';
   }
   return errors;
 }
@@ -64,277 +38,168 @@ export default function RegisterPage() {
   const { role: roleParam } = useParams();
   const { register, registerDriver } = useAuth();
   const navigate = useNavigate();
-  const initialRole = roleParam === 'driver' ? 'driver' : 'customer';
-  const [role, setRole] = useState(initialRole);
-  const [customer, setCustomer] = useState(emptyCustomer);
-  const [driver, setDriver] = useState(emptyDriver);
+  const [role, setRole] = useState(roleParam === 'driver' ? 'driver' : 'customer');
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const seatConfiguration = useMemo(
-    () => seatConfigurationForType(driver.vehicleType),
-    [driver.vehicleType]
-  );
+  useEffect(() => {
+    setRole(roleParam === 'driver' ? 'driver' : 'customer');
+  }, [roleParam]);
 
-  const setCustomerField = (e) =>
-    setCustomer((f) => ({ ...f, [e.target.name]: e.target.value }));
-  const setDriverField = (e) => {
-    const { name, value } = e.target;
-    setDriver((f) => {
-      const next = { ...f, [name]: value };
-      if (name === 'vehicleType') {
-        if (value === VEHICLE_TYPES.SIX_SEATER) {
-          next.make = next.make === 'Maruti' && next.model === 'Dzire' ? 'Maruti' : next.make;
-          next.model = next.model === 'Dzire' ? 'Ertiga' : next.model;
-        } else if (next.model === 'Ertiga') {
-          next.model = 'Dzire';
-        }
-      }
-      return next;
-    });
-  };
+  const setField = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const switchRole = (next) => {
     setRole(next);
     setError('');
+    setFieldErrors({});
     navigate(next === 'driver' ? '/register/driver' : '/register/customer', { replace: true });
   };
 
-  const onSubmitCustomer = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    const errors = accountErrors(customer);
+    const errors = accountErrors(form);
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
-    setLoading(true);
-    setError('');
-    try {
-      await register({
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        password: customer.password,
-      });
-      navigate('/search', { replace: true });
-    } catch (err) {
-      setError(getErrorMessage(err, 'Could not create passenger account'));
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const onSubmitDriver = async (e) => {
-    e.preventDefault();
-    const errors = accountErrors(driver);
-    if (!/^[A-Za-z0-9-]{5,20}$/.test(driver.licenseNumber.trim())) {
-      errors.licenseNumber = 'Enter the licence number';
-    }
-    if (!/^[A-Z0-9]{6,12}$/.test(driver.registrationNumber.trim().toUpperCase())) {
-      errors.registrationNumber = 'Use 6–12 letters or numbers';
-    }
-    if (!driver.make.trim()) errors.make = 'Choose or enter a company';
-    if (!driver.model.trim()) errors.model = 'Choose or enter a model';
-    if (!driver.features.length) errors.features = 'Pick at least one feature';
-    setFieldErrors(errors);
-    if (Object.keys(errors).length) return;
     setLoading(true);
     setError('');
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      password: form.password,
+    };
+
     try {
-      await registerDriver({
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-        password: driver.password,
-        licenseNumber: driver.licenseNumber,
-        vehicle: {
-          registrationNumber: driver.registrationNumber,
-          make: driver.make,
-          model: driver.model,
-          vehicleType: driver.vehicleType,
-          capacity: capacityForType(driver.vehicleType),
-          seatConfiguration,
-          features: driver.features,
-        },
-      });
-      navigate('/driver', { replace: true });
+      if (role === 'driver') {
+        await registerDriver(payload);
+        navigate('/driver/profile?complete=1', { replace: true });
+      } else {
+        await register(payload);
+        navigate('/app', { replace: true });
+      }
     } catch (err) {
-      setError(getErrorMessage(err, 'Could not create driver account'));
+      setError(
+        getErrorMessage(
+          err,
+          role === 'driver' ? 'Could not create car owner account' : 'Could not create passenger account'
+        )
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <Logo size="lg" />
-      <h1 className="mt-4 font-display text-3xl font-bold text-navy">Create your RaahiX account</h1>
-      <p className="mt-1 text-sm text-slate">
-        Choose passenger or car owner registration. Car owner signup includes full car details.
-      </p>
+    <AuthShell
+      title="Create account"
+      subtitle="Same form for both roles. Username is generated for you."
+      darkPanel
+      illustration={<SignupWelcomeArt />}
+      footer={
+        <p className="text-center text-sm text-slate">
+          Already registered?{' '}
+          <Link to="/login" className="font-semibold text-brand-ink hover:underline">
+            Log in
+          </Link>
+        </p>
+      }
+    >
+      <div className="rounded-2xl border-2 border-ink/10 bg-white p-4 shadow-[var(--shadow-soft)]">
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-mist p-1">
+          <button
+            type="button"
+            onClick={() => switchRole('customer')}
+            className={cn(
+              'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold transition',
+              role === 'customer' ? 'bg-brand text-ink shadow-sm' : 'text-slate hover:text-ink'
+            )}
+          >
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            Passenger
+          </button>
+          <button
+            type="button"
+            onClick={() => switchRole('driver')}
+            className={cn(
+              'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold transition',
+              role === 'driver' ? 'bg-brand text-ink shadow-sm' : 'text-slate hover:text-ink'
+            )}
+          >
+            <CarFront className="h-4 w-4" aria-hidden="true" />
+            Car owner
+          </button>
+        </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-1.5 shadow-[var(--shadow-soft)]">
-        <button
-          type="button"
-          onClick={() => switchRole('customer')}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition',
-            role === 'customer' ? 'bg-brand text-ink shadow-[var(--shadow-lift)]' : 'text-slate hover:bg-mist'
-          )}
-        >
-          <UserRound className="h-4 w-4" />
-          Passenger
-        </button>
-        <button
-          type="button"
-          onClick={() => switchRole('driver')}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition',
-            role === 'driver' ? 'bg-brand text-ink shadow-[var(--shadow-lift)]' : 'text-slate hover:bg-mist'
-          )}
-        >
-          <CarFront className="h-4 w-4" />
-          Car owner
-        </button>
-      </div>
+        {role === 'driver' ? (
+          <p className="mt-2 text-[11px] leading-snug text-slate">
+            After signup, finish licence, UPI, and vehicle on your profile before posting rides.
+          </p>
+        ) : null}
 
-      {role === 'customer' ? (
-        <form
-          onSubmit={onSubmitCustomer}
-          className="mt-6 space-y-4 rounded-2xl border border-line bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"
-        >
-          <div>
-            <h2 className="font-display text-xl font-bold text-navy">Passenger details</h2>
-            <p className="text-sm text-slate">Book seats, manage trips, and pay securely.</p>
-          </div>
+        <form onSubmit={onSubmit} className="mt-3 space-y-2.5">
           {error ? <Alert tone="error">{error}</Alert> : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Full name" name="name" required value={customer.name} error={fieldErrors.name} onChange={setCustomerField} />
-            <Input label="Phone" name="phone" required inputMode="numeric" value={customer.phone} error={fieldErrors.phone} onChange={setCustomerField} />
+
+          <Input
+            dense
+            label="Full name"
+            name="name"
+            required
+            icon={UserRound}
+            placeholder="Your full name"
+            value={form.name}
+            error={fieldErrors.name}
+            onChange={setField}
+          />
+
+          <div className="grid grid-cols-2 gap-2.5">
             <Input
+              dense
+              label="Phone"
+              name="phone"
+              required
+              inputMode="numeric"
+              icon={Phone}
+              placeholder="10-digit"
+              value={form.phone}
+              error={fieldErrors.phone}
+              onChange={setField}
+            />
+            <Input
+              dense
               label="Email"
               type="email"
               name="email"
               required
-              value={customer.email}
+              icon={Mail}
+              placeholder="you@email.com"
+              value={form.email}
               error={fieldErrors.email}
-              onChange={setCustomerField}
-              className="sm:col-span-2"
-            />
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              required
-              hint="At least 8 characters, with a letter and a number"
-              value={customer.password}
-              error={fieldErrors.password}
-              onChange={setCustomerField}
-            />
-            <Input
-              label="Confirm password"
-              type="password"
-              name="confirmPassword"
-              required
-              value={customer.confirmPassword}
-              error={fieldErrors.confirmPassword}
-              onChange={setCustomerField}
+              onChange={setField}
             />
           </div>
-          <Button type="submit" loading={loading} className="w-full sm:w-auto">
-            Create passenger account
+
+          <Input
+            dense
+            label="Password"
+            type="password"
+            name="password"
+            required
+            icon={LockKeyhole}
+            placeholder="8+ chars, letter + number"
+            value={form.password}
+            error={fieldErrors.password}
+            onChange={setField}
+          />
+
+          <Button type="submit" loading={loading} className="mt-1 w-full">
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            {role === 'driver' ? 'Sign up as car owner' : 'Sign up as passenger'}
           </Button>
         </form>
-      ) : (
-        <form
-          onSubmit={onSubmitDriver}
-          className="mt-6 space-y-6 rounded-2xl border border-line bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"
-        >
-          <div>
-            <h2 className="font-display text-xl font-bold text-navy">Car owner registration</h2>
-            <p className="text-sm text-slate">
-              Your profile stays pending verification until an admin reviews license and vehicle docs.
-            </p>
-          </div>
-          {error ? <Alert tone="error">{error}</Alert> : null}
-
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-coral">Account</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Full name" name="name" required value={driver.name} error={fieldErrors.name} onChange={setDriverField} />
-              <Input label="Phone" name="phone" required value={driver.phone} error={fieldErrors.phone} onChange={setDriverField} />
-              <Input
-                label="Email"
-                type="email"
-                name="email"
-                required
-                value={driver.email}
-                error={fieldErrors.email}
-                onChange={setDriverField}
-                className="sm:col-span-2"
-              />
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                required
-                value={driver.password}
-                error={fieldErrors.password}
-                onChange={setDriverField}
-              />
-              <Input
-                label="Confirm password"
-                type="password"
-                name="confirmPassword"
-                required
-                value={driver.confirmPassword}
-                error={fieldErrors.confirmPassword}
-                onChange={setDriverField}
-              />
-              <Input
-                label="Driving licence number"
-                name="licenseNumber"
-                required
-                value={driver.licenseNumber}
-                error={fieldErrors.licenseNumber}
-                onChange={setDriverField}
-                className="sm:col-span-2"
-              />
-            </div>
-          </section>
-
-          <section className="space-y-4 border-t border-line pt-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-coral">Car details</h3>
-            <CabDetailsForm
-              value={driver}
-              errors={fieldErrors}
-              onChange={(next) => setDriver(next)}
-            />
-            <div className="rounded-xl bg-mist/80 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate">
-                Cabin layout · {capacityForType(driver.vehicleType)} passenger seats
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {seatConfiguration.map((s) => (
-                  <Badge key={s.seatNumber} tone="brand">
-                    {s.seatNumber} · R{s.row}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <Button type="submit" loading={loading} className="w-full sm:w-auto">
-            Register as a car owner
-          </Button>
-        </form>
-      )}
-
-      <p className="mt-4 text-center text-sm text-slate">
-        Already registered?{' '}
-        <Link to="/login" className="font-semibold text-brand-dark">
-          Log in
-        </Link>
-      </p>
-    </div>
+      </div>
+    </AuthShell>
   );
 }
